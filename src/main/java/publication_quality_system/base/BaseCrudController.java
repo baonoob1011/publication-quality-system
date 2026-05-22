@@ -4,9 +4,6 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-
-
-
 public abstract class BaseCrudController<D, ID> extends BaseController {
 
     protected final BaseCrudService<D, ID> service;
@@ -14,6 +11,7 @@ public abstract class BaseCrudController<D, ID> extends BaseController {
     public BaseCrudController(BaseCrudService<D, ID> service) {
         this.service = service;
     }
+
     @PostMapping
     public ResponseEntity<BaseResponse<D>> create(@Valid @RequestBody D dto) {
         D createdData = service.create(dto);

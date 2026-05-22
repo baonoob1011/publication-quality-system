@@ -1,21 +1,16 @@
 package publication_quality_system.services;
 
 import org.springframework.data.domain.Pageable;
+import publication_quality_system.base.BaseCrudService;
 import publication_quality_system.dtos.ResearchGroupDto;
 import publication_quality_system.dtos.ResearchGroupMemberDto;
+import publication_quality_system.dtos.ResearchProfileDto;
 
 import java.util.List;
 
-public interface ResearchGroupService {
-    ResearchGroupDto createGroup(ResearchGroupDto dto);
+public interface ResearchGroupService extends BaseCrudService<ResearchGroupDto, Long> {
 
-    ResearchGroupDto updateGroup(Long groupId, ResearchGroupDto dto);
-
-    ResearchGroupDto getGroupById(Long groupId);
-
-    List<ResearchGroupDto> getAllGroups(Pageable pageable);
-
-    void deleteGroup(Long groupId);
+    List<ResearchGroupDto> getAll(Pageable pageable);
 
     ResearchGroupMemberDto addMember(Long groupId, ResearchGroupMemberDto dto);
 
