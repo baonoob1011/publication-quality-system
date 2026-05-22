@@ -10,9 +10,11 @@ import publication_quality_system.entities.User;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface UserMapper {
 
+    @Mapping(target = "roles", ignore = true)
     UserDto toUserDto(User user);
 
     @Mapping(target = "password", ignore = true)
+    @Mapping(target = "roles", ignore = true)
     User toUserEntity(UserDto dto);
 
     @Mapping(target = "id", ignore = true)

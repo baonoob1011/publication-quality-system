@@ -10,8 +10,10 @@ import publication_quality_system.entities.Role;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface RoleMapper {
 
+    @Mapping(target = "permissions", expression = "java(role.getPermissions() == null ? null : role.getPermissions().stream().map(permission -> permission.getName()).collect(java.util.stream.Collectors.toSet()))")
     RoleDto toRoleDto(Role role);
 
+    @Mapping(target = "permissions", ignore = true)
     Role toRoleEntity(RoleDto dto);
 
     @Mapping(target = "id", ignore = true)

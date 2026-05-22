@@ -1,76 +1,250 @@
 package publication_quality_system.services.impl;
 
-import publication_quality_system.services.RoleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import publication_quality_system.dtos.CreateRoleDto;
 import publication_quality_system.dtos.RoleDto;
+import publication_quality_system.dtos.UpdateRoleDto;
+import publication_quality_system.dtos.UpdateUserRolesDto;
+import publication_quality_system.dtos.UserRoleDto;
+import publication_quality_system.entities.Permission;
 import publication_quality_system.entities.Role;
 import publication_quality_system.entities.User;
 import publication_quality_system.exceptions.AppException;
 import publication_quality_system.exceptions.RoleErrorCode;
 import publication_quality_system.exceptions.UserErrorCode;
+import publication_quality_system.repositories.PermissionRepository;
 import publication_quality_system.repositories.RoleRepository;
-import publication_quality_system.mappers.RoleMapper;
 import publication_quality_system.repositories.UserRepository;
+import publication_quality_system.services.CognitoGroupService;
+import publication_quality_system.services.RoleService;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class RoleServiceImpl implements RoleService {
+
+    private static final String ADMIN_ROLE = "ADMIN";
+
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
-    private final RoleMapper mapper;
+    private final PermissionRepository permissionRepository;
+    private final CognitoGroupService cognitoGroupService;
 
     @Override
     @Transactional
-    public RoleDto create(RoleDto dto) {
-        Role role = mapper.toRoleEntity(dto);
-        role = roleRepository.save(role);
-        return mapper.toRoleDto(role);
-    }
+    public RoleDto createRole(CreateRoleDto dto) {
+        String roleName = normalizeRoleName(dto.getName());
+        if (roleRepository.existsByName(roleName)) {
+            throw new AppException(RoleErrorCode.ROLE_ALREADY_EXISTS);
+        }
 
-    @Override
-    public RoleDto getById(Long id) {
-        Role role = roleRepository.findById(id)
-                .orElseThrow(() -> new AppException(RoleErrorCode.ROLE_NOT_FOUND));
-        return mapper.toRoleDto(role);
-    }
+        Set<Permission> permissions = loadPermissions(dto.getPermissionIds());
+        cognitoGroupService.createGroup(roleName, dto.getDescription());
 
-    @Override
-    @Transactional
-    public RoleDto update(Long id, RoleDto dto) {
-        Role role = roleRepository.findById(id)
-                .orElseThrow(() -> new AppException(RoleErrorCode.ROLE_NOT_FOUND));
-        mapper.updateRoleFromDto(dto, role);
-        role = roleRepository.save(role);
-        return mapper.toRoleDto(role);
-    }
-
-    @Override
-    @Transactional
-    public void assignRole(Long userId, Long roleId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new AppException(UserErrorCode.USER_NOT_FOUND));
-        Role role = roleRepository.findById(roleId)
-                .orElseThrow(() -> new AppException(RoleErrorCode.ROLE_NOT_FOUND));
-
-        user.getRoles().add(role);
-        userRepository.save(user);
+        try {
+            Role role = new Role();
+            role.setName(roleName);
+            role.setDescription(dto.getDescription());
+            role.setPermissions(permissions);
+            role = roleRepository.save(role);
+            return toRoleDto(role);
+        } catch (RuntimeException exception) {
+            cognitoGroupService.deleteGroup(roleName);
+            throw exception;
+        }
     }
 
     @Override
     @Transactional
-    public void delete(Long id) {
-        roleRepository.deleteById(id);
+    public RoleDto updateRole(Long roleId, UpdateRoleDto dto) {
+        Role role = getRoleOrThrow(roleId);
+        String oldName = role.getName();
+        String newName = dto.getName() == null || dto.getName().isBlank()
+                ? oldName
+                : normalizeRoleName(dto.getName());
+
+        if (!oldName.equals(newName) && roleRepository.existsByName(newName)) {
+            throw new AppException(RoleErrorCode.ROLE_ALREADY_EXISTS);
+        }
+
+        List<User> usersWithRole = userRepository.findByRolesId(roleId);
+        if (!oldName.equals(newName)) {
+            cognitoGroupService.createGroup(newName, dto.getDescription());
+            for (User user : usersWithRole) {
+                cognitoGroupService.addUserToGroup(user.getUsername(), newName);
+                cognitoGroupService.removeUserFromGroup(user.getUsername(), oldName);
+            }
+            cognitoGroupService.deleteGroup(oldName);
+        }
+
+        role.setName(newName);
+        role.setDescription(dto.getDescription());
+        if (dto.getPermissionIds() != null) {
+            role.setPermissions(loadPermissions(dto.getPermissionIds()));
+        }
+
+        return toRoleDto(roleRepository.save(role));
+    }
+
+    @Override
+    @Transactional
+    public void deleteRole(Long roleId) {
+        Role role = getRoleOrThrow(roleId);
+        if (ADMIN_ROLE.equals(role.getName())) {
+            throw new AppException(RoleErrorCode.ROLE_IN_USE, "ADMIN role cannot be deleted");
+        }
+
+        List<User> usersWithRole = userRepository.findByRolesId(roleId);
+        for (User user : usersWithRole) {
+            user.getRoles().remove(role);
+            userRepository.save(user);
+            cognitoGroupService.removeUserFromGroup(user.getUsername(), role.getName());
+        }
+
+        roleRepository.delete(role);
+        cognitoGroupService.deleteGroup(role.getName());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public java.util.List<RoleDto> getAll(Pageable pageable) {
+    public RoleDto getRoleById(Long roleId) {
+        return toRoleDto(getRoleOrThrow(roleId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<RoleDto> getAllRoles(Pageable pageable) {
         return roleRepository.findAll(pageable)
-                .map(mapper::toRoleDto)
+                .map(this::toRoleDto)
                 .getContent();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserRoleDto> getUserRoles(Long userId) {
+        User user = getUserOrThrow(userId);
+        return user.getRoles().stream()
+                .map(this::toUserRoleDto)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public List<UserRoleDto> assignRoleToUser(Long userId, Long roleId) {
+        User user = getUserOrThrow(userId);
+        Role role = getRoleOrThrow(roleId);
+
+        cognitoGroupService.ensureGroupExists(role.getName());
+        if (user.getRoles().add(role)) {
+            userRepository.save(user);
+        }
+        cognitoGroupService.addUserToGroup(user.getUsername(), role.getName());
+        return getUserRoles(userId);
+    }
+
+    @Override
+    @Transactional
+    public List<UserRoleDto> removeRoleFromUser(Long userId, Long roleId) {
+        User user = getUserOrThrow(userId);
+        Role role = getRoleOrThrow(roleId);
+
+        user.getRoles().remove(role);
+        userRepository.save(user);
+        cognitoGroupService.removeUserFromGroup(user.getUsername(), role.getName());
+        return getUserRoles(userId);
+    }
+
+    @Override
+    @Transactional
+    public List<UserRoleDto> replaceUserRoles(Long userId, UpdateUserRolesDto dto) {
+        User user = getUserOrThrow(userId);
+        Set<Long> roleIds = dto.getRoleIds() == null ? Set.of() : dto.getRoleIds();
+        Set<Role> targetRoles = new HashSet<>(roleRepository.findAllById(roleIds));
+
+        if (targetRoles.size() != roleIds.size()) {
+            throw new AppException(RoleErrorCode.ROLE_NOT_FOUND);
+        }
+
+        Set<Role> currentRoles = new HashSet<>(user.getRoles());
+        Set<Role> rolesToAdd = targetRoles.stream()
+                .filter(role -> !currentRoles.contains(role))
+                .collect(Collectors.toSet());
+        Set<Role> rolesToRemove = currentRoles.stream()
+                .filter(role -> !targetRoles.contains(role))
+                .collect(Collectors.toSet());
+
+        for (Role role : rolesToAdd) {
+            cognitoGroupService.ensureGroupExists(role.getName());
+            cognitoGroupService.addUserToGroup(user.getUsername(), role.getName());
+        }
+
+        for (Role role : rolesToRemove) {
+            cognitoGroupService.removeUserFromGroup(user.getUsername(), role.getName());
+        }
+
+        user.setRoles(targetRoles);
+        userRepository.save(user);
+        return getUserRoles(userId);
+    }
+
+    private Role getRoleOrThrow(Long roleId) {
+        return roleRepository.findById(roleId)
+                .orElseThrow(() -> new AppException(RoleErrorCode.ROLE_NOT_FOUND));
+    }
+
+    private User getUserOrThrow(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(UserErrorCode.USER_NOT_FOUND));
+    }
+
+    private String normalizeRoleName(String value) {
+        if (value == null || value.isBlank()) {
+            throw new AppException(RoleErrorCode.ROLE_NAME_REQUIRED);
+        }
+        return value.trim().toUpperCase().replaceAll("\\s+", "_");
+    }
+
+    private Set<Permission> loadPermissions(Set<Long> permissionIds) {
+        if (permissionIds == null || permissionIds.isEmpty()) {
+            return new HashSet<>();
+        }
+
+        List<Permission> permissions = permissionRepository.findAllById(permissionIds);
+        if (permissions.size() != permissionIds.size()) {
+            throw new AppException(RoleErrorCode.VALIDATION_ERROR, "One or more permissions were not found");
+        }
+        return new HashSet<>(permissions);
+    }
+
+    private RoleDto toRoleDto(Role role) {
+        RoleDto dto = new RoleDto();
+        dto.setId(role.getId());
+        dto.setName(role.getName());
+        dto.setDescription(role.getDescription());
+        dto.setPermissions(permissionNames(role));
+        return dto;
+    }
+
+    private UserRoleDto toUserRoleDto(Role role) {
+        UserRoleDto dto = new UserRoleDto();
+        dto.setId(role.getId());
+        dto.setName(role.getName());
+        dto.setDescription(role.getDescription());
+        dto.setPermissions(permissionNames(role));
+        return dto;
+    }
+
+    private Set<String> permissionNames(Role role) {
+        return role.getPermissions().stream()
+                .map(Permission::getName)
+                .collect(Collectors.toSet());
     }
 }

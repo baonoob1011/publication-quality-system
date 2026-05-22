@@ -1,19 +1,15 @@
 package publication_quality_system.dtos;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 import java.util.Set;
 
 @Data
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class RoleDto {
+public class UserRoleDto {
     private Long id;
-
-    @NotBlank(message = "Role name cannot be empty")
     private String name;
-
     private String description;
     private Set<String> permissions;
 }

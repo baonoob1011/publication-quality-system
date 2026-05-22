@@ -8,7 +8,6 @@ import lombok.Setter;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 import publication_quality_system.base.BaseEntity;
-import publication_quality_system.enums.RoleName;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -21,9 +20,8 @@ import java.util.Set;
 @Table(name = "roles")
 public class Role extends BaseEntity {
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, unique = true)
-    private RoleName name;
+    @Column(nullable = false, unique = true, length = 100)
+    private String name;
 
     private String description;
 

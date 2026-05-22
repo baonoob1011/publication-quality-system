@@ -27,10 +27,10 @@ public class RoleSeeder implements BaseDataSeeder {
     @Transactional
     public void seed() {
         for (RoleName roleName : RoleName.values()) {
-            Role role = roleRepository.findByName(roleName).orElse(null);
+            Role role = roleRepository.findByName(roleName.name()).orElse(null);
             if (role == null) {
                 role = new Role();
-                role.setName(roleName);
+                role.setName(roleName.name());
                 role.setDescription("Role for " + roleName.name());
                 role.setCreatedBy("SYSTEM");
                 role.setUpdatedBy("SYSTEM");
@@ -63,6 +63,7 @@ public class RoleSeeder implements BaseDataSeeder {
         if (roleName == RoleName.LAB_LEADER) {
             permissions.addAll(Arrays.asList(
                     PermissionName.USER_READ, PermissionName.ROLE_ASSIGN,
+                    PermissionName.ROLE_READ,
                     PermissionName.LAB_MEMBER_CREATE, PermissionName.LAB_MEMBER_READ,
                     PermissionName.LAB_MEMBER_UPDATE, PermissionName.LAB_MEMBER_DELETE,
                     PermissionName.RESEARCH_GROUP_CREATE, PermissionName.RESEARCH_GROUP_READ,
