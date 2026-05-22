@@ -6,7 +6,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import publication_quality_system.entities.ResearchGroup;
 
+import java.util.Optional;
+
 @Repository
 public interface ResearchGroupRepository extends JpaRepository<ResearchGroup, Long> {
     Page<ResearchGroup> findAllByDeletedFalse(Pageable pageable);
+
+    Optional<ResearchGroup> findByName(String name);
+
+    boolean existsByName(String name);
 }

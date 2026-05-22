@@ -38,7 +38,7 @@ public class RoleSeeder implements DataSeeder {
 
             Set<PermissionName> allowedPermissions = getPermissionsForRole(roleName);
             Set<Permission> permissionsToAssign = allowedPermissions.stream()
-                    .map(name -> permissionRepository.findByName(name)
+                    .map(name -> permissionRepository.findByName(name.name())
                             .orElseThrow(() -> new IllegalStateException("Permission not found: " + name)))
                     .collect(Collectors.toSet());
 
@@ -66,6 +66,7 @@ public class RoleSeeder implements DataSeeder {
                     PermissionName.LAB_MEMBER_UPDATE, PermissionName.LAB_MEMBER_DELETE,
                     PermissionName.RESEARCH_GROUP_CREATE, PermissionName.RESEARCH_GROUP_READ,
                     PermissionName.RESEARCH_GROUP_UPDATE, PermissionName.RESEARCH_GROUP_DELETE,
+                    PermissionName.RESEARCH_GROUP_MEMBER_MANAGE,
                     PermissionName.RESEARCH_PROFILE_CREATE, PermissionName.RESEARCH_PROFILE_READ,
                     PermissionName.RESEARCH_PROFILE_UPDATE, PermissionName.RESEARCH_PROFILE_DELETE,
                     PermissionName.PAPER_CREATE, PermissionName.PAPER_READ_OWN, PermissionName.PAPER_READ_ALL,

@@ -19,7 +19,8 @@ import java.time.LocalDate;
 @Table(
         name = "research_group_members"
 )
-
+@SQLDelete(sql = "UPDATE research_group_members SET deleted = true WHERE id=?")
+@SQLRestriction("deleted = false")
 public class ResearchGroupMember extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

@@ -17,10 +17,11 @@ public class PermissionSeeder implements DataSeeder {
     @Transactional
     public void seed() {
         for (PermissionName name : PermissionName.values()) {
-            if (permissionRepository.findByName(name).isEmpty()) {
+            String permissionName = name.name();
+            if (permissionRepository.findByName(permissionName).isEmpty()) {
                 Permission permission = new Permission();
-                permission.setName(name);
-                permission.setDescription("Permission for " + name.name());
+                permission.setName(permissionName);
+                permission.setDescription("Permission for " + permissionName);
                 permission.setCreatedBy("SYSTEM");
                 permission.setUpdatedBy("SYSTEM");
                 permissionRepository.save(permission);

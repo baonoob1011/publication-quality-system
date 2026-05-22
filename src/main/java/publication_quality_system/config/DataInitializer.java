@@ -2,6 +2,8 @@ package publication_quality_system.config;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import publication_quality_system.config.seeder.DataSeeder;
 
@@ -10,6 +12,7 @@ import java.util.List;
 
 @Component
 @RequiredArgsConstructor
+@Order(Ordered.LOWEST_PRECEDENCE)
 public class DataInitializer implements CommandLineRunner {
 
     private final List<DataSeeder> seeders;

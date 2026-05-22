@@ -1,20 +1,28 @@
 package publication_quality_system.services.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import publication_quality_system.dtos.ResearchGroupDto;
+import publication_quality_system.dtos.ResearchGroupMemberDto;
 import publication_quality_system.entities.ResearchGroup;
 import publication_quality_system.entities.ResearchGroupMember;
 import publication_quality_system.entities.User;
+import publication_quality_system.enums.MemberRoleInGroup;
+import publication_quality_system.enums.MemberStatus;
 import publication_quality_system.exceptions.AppException;
 import publication_quality_system.exceptions.ResearchGroupErrorCode;
 import publication_quality_system.exceptions.UserErrorCode;
-import publication_quality_system.repositories.ResearchGroupRepository;
 import publication_quality_system.mappers.ResearchGroupMapper;
+import publication_quality_system.mappers.ResearchGroupMemberMapper;
 import publication_quality_system.repositories.ResearchGroupMemberRepository;
+import publication_quality_system.repositories.ResearchGroupRepository;
 import publication_quality_system.repositories.UserRepository;
 import publication_quality_system.services.ResearchGroupService;
+
+import java.time.LocalDate;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -23,71 +31,221 @@ public class ResearchGroupServiceImpl implements ResearchGroupService {
     private final ResearchGroupRepository groupRepository;
     private final UserRepository userRepository;
     private final ResearchGroupMemberRepository memberRepository;
-    private final ResearchGroupMapper mapper;
+    private final ResearchGroupMapper groupMapper;
+    private final ResearchGroupMemberMapper memberMapper;
 
     @Override
     @Transactional
-    public ResearchGroupDto create(ResearchGroupDto dto) {
-        ResearchGroup group = mapper.toGroupEntity(dto);
+    public ResearchGroupDto createGroup(ResearchGroupDto dto) {
+        if (groupRepository.existsByName(dto.getName())) {
+            throw new AppException(ResearchGroupErrorCode.RESEARCH_GROUP_NAME_ALREADY_EXISTS);
+        }
+
+        ResearchGroup group = groupMapper.toGroupEntity(dto);
         group = groupRepository.save(group);
-        return mapper.toGroupDto(group);
-    }
-
-    @Override
-    public ResearchGroupDto getById(Long id) {
-        ResearchGroup group = groupRepository.findById(id)
-                .orElseThrow(() -> new AppException(ResearchGroupErrorCode.GROUP_NOT_FOUND));
-        return mapper.toGroupDto(group);
+        return toGroupDto(group, true);
     }
 
     @Override
     @Transactional
-    public ResearchGroupDto update(Long id, ResearchGroupDto dto) {
-        ResearchGroup group = groupRepository.findById(id)
-                .orElseThrow(() -> new AppException(ResearchGroupErrorCode.GROUP_NOT_FOUND));
-        mapper.updateGroupFromDto(dto, group);
+    public ResearchGroupDto updateGroup(Long groupId, ResearchGroupDto dto) {
+        ResearchGroup group = getGroupOrThrow(groupId);
+        if (dto.getName() != null && !dto.getName().equals(group.getName()) && groupRepository.existsByName(dto.getName())) {
+            throw new AppException(ResearchGroupErrorCode.RESEARCH_GROUP_NAME_ALREADY_EXISTS);
+        }
+
+        groupMapper.updateGroupFromDto(dto, group);
         group = groupRepository.save(group);
-        return mapper.toGroupDto(group);
+        return toGroupDto(group, true);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ResearchGroupDto getGroupById(Long groupId) {
+        return toGroupDto(getGroupOrThrow(groupId), true);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ResearchGroupDto> getAllGroups(Pageable pageable) {
+        return groupRepository.findAllByDeletedFalse(pageable)
+                .map(group -> toGroupDto(group, false))
+                .getContent();
     }
 
     @Override
     @Transactional
-    public void delete(Long id) {
-        groupRepository.deleteById(id);
+    public void deleteGroup(Long groupId) {
+        ResearchGroup group = getGroupOrThrow(groupId);
+        groupRepository.delete(group);
     }
 
     @Override
     @Transactional
-    public void assignLeader(Long groupId, Long userId) {
-        ResearchGroup group = groupRepository.findById(groupId)
-                .orElseThrow(() -> new AppException(ResearchGroupErrorCode.GROUP_NOT_FOUND));
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new AppException(UserErrorCode.USER_NOT_FOUND));
-        group.setLeader(user);
-        groupRepository.save(group);
-        ResearchGroupMember membership = memberRepository.findByResearchGroupAndUser(group, user)
+    public ResearchGroupMemberDto addMember(Long groupId, ResearchGroupMemberDto dto) {
+        ResearchGroup group = getGroupOrThrow(groupId);
+        User user = getUserOrThrow(dto.getUserId());
+        MemberRoleInGroup role = dto.getRole() == null ? MemberRoleInGroup.MEMBER : dto.getRole();
+
+        ResearchGroupMember member = memberRepository.findByResearchGroupIdAndUserId(groupId, dto.getUserId())
+                .orElse(null);
+        if (member != null && MemberStatus.ACTIVE.equals(member.getStatus())) {
+            throw new AppException(ResearchGroupErrorCode.GROUP_MEMBER_ALREADY_EXISTS);
+        }
+
+        if (role == MemberRoleInGroup.LEADER) {
+            return assignGroupLeader(groupId, dto.getUserId());
+        }
+
+        if (member == null) {
+            member = new ResearchGroupMember();
+            member.setResearchGroup(group);
+            member.setUser(user);
+            member.setJoinedAt(LocalDate.now());
+            member.setContributionScore(0.0);
+            member.setAssignedReviews(0);
+            member.setCompletedReviews(0);
+        }
+
+        member.setRole(role);
+        member.setStatus(MemberStatus.ACTIVE);
+        member.setLeftAt(null);
+        member.setResponsibilities(dto.getResponsibilities());
+        return memberMapper.toDto(memberRepository.save(member));
+    }
+
+    @Override
+    @Transactional
+    public void removeMember(Long groupId, Long userId) {
+        ResearchGroupMember member = getMemberOrThrow(groupId, userId);
+        if (member.getRole() == MemberRoleInGroup.LEADER) {
+            throw new AppException(ResearchGroupErrorCode.CANNOT_REMOVE_ONLY_LEADER);
+        }
+
+        member.setStatus(MemberStatus.INACTIVE);
+        member.setLeftAt(LocalDate.now());
+        memberRepository.save(member);
+    }
+
+    @Override
+    @Transactional
+    public ResearchGroupMemberDto changeMemberRole(Long groupId, Long userId, ResearchGroupMemberDto dto) {
+        MemberRoleInGroup newRole = dto.getRole();
+        if (newRole == null) {
+            throw new AppException(ResearchGroupErrorCode.VALIDATION_ERROR);
+        }
+        if (newRole == MemberRoleInGroup.LEADER) {
+            return assignGroupLeader(groupId, userId);
+        }
+
+        ResearchGroupMember member = getMemberOrThrow(groupId, userId);
+        if (member.getRole() == MemberRoleInGroup.LEADER) {
+            throw new AppException(ResearchGroupErrorCode.GROUP_LEADER_REQUIRED);
+        }
+
+        member.setRole(newRole);
+        return memberMapper.toDto(memberRepository.save(member));
+    }
+
+    @Override
+    @Transactional
+    public ResearchGroupMemberDto updateMemberStatus(Long groupId, Long userId, ResearchGroupMemberDto dto) {
+        if (dto.getStatus() == null) {
+            throw new AppException(ResearchGroupErrorCode.VALIDATION_ERROR);
+        }
+
+        ResearchGroupMember member = getMemberOrThrow(groupId, userId);
+        if (member.getRole() == MemberRoleInGroup.LEADER && dto.getStatus() != MemberStatus.ACTIVE) {
+            throw new AppException(ResearchGroupErrorCode.CANNOT_REMOVE_ONLY_LEADER);
+        }
+
+        member.setStatus(dto.getStatus());
+        member.setLeftAt(dto.getStatus() == MemberStatus.ACTIVE ? null : LocalDate.now());
+        return memberMapper.toDto(memberRepository.save(member));
+    }
+
+    @Override
+    @Transactional
+    public ResearchGroupMemberDto assignGroupLeader(Long groupId, Long userId) {
+        ResearchGroup group = getGroupOrThrow(groupId);
+        User user = getUserOrThrow(userId);
+
+        memberRepository.findByResearchGroupIdAndRole(groupId, MemberRoleInGroup.LEADER)
+                .filter(oldLeader -> !oldLeader.getUser().getId().equals(userId))
+                .ifPresent(oldLeader -> {
+                    oldLeader.setRole(MemberRoleInGroup.MEMBER);
+                    memberRepository.save(oldLeader);
+                });
+
+        ResearchGroupMember newLeader = memberRepository.findByResearchGroupIdAndUserId(groupId, userId)
                 .orElseGet(() -> {
                     ResearchGroupMember member = new ResearchGroupMember();
                     member.setResearchGroup(group);
                     member.setUser(user);
+                    member.setJoinedAt(LocalDate.now());
+                    member.setContributionScore(0.0);
+                    member.setAssignedReviews(0);
+                    member.setCompletedReviews(0);
                     return member;
                 });
-        membership.setLeader(true);
-        memberRepository.save(membership);
+
+        newLeader.setRole(MemberRoleInGroup.LEADER);
+        newLeader.setStatus(MemberStatus.ACTIVE);
+        newLeader.setLeftAt(null);
+        return memberMapper.toDto(memberRepository.save(newLeader));
     }
 
     @Override
-    @Transactional
-    public void addMember(Long groupId, Long userId) {
-        ResearchGroup group = groupRepository.findById(groupId)
-                .orElseThrow(() -> new AppException(ResearchGroupErrorCode.GROUP_NOT_FOUND));
-        User user = userRepository.findById(userId)
+    @Transactional(readOnly = true)
+    public List<ResearchGroupMemberDto> getGroupMembers(Long groupId) {
+        getGroupOrThrow(groupId);
+        return memberRepository.findByResearchGroupId(groupId)
+                .stream()
+                .map(memberMapper::toDto)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ResearchGroupDto> getGroupsByUser(Long userId) {
+        getUserOrThrow(userId);
+        return memberRepository.findByUserId(userId)
+                .stream()
+                .map(ResearchGroupMember::getResearchGroup)
+                .map(group -> toGroupDto(group, false))
+                .toList();
+    }
+
+    private ResearchGroup getGroupOrThrow(Long groupId) {
+        return groupRepository.findById(groupId)
+                .orElseThrow(() -> new AppException(ResearchGroupErrorCode.RESEARCH_GROUP_NOT_FOUND));
+    }
+
+    private User getUserOrThrow(Long userId) {
+        return userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(UserErrorCode.USER_NOT_FOUND));
-        if (memberRepository.findByResearchGroupAndUser(group, user).isEmpty()) {
-            ResearchGroupMember member = new ResearchGroupMember();
-            member.setResearchGroup(group);
-            member.setUser(user);
-            memberRepository.save(member);
+    }
+
+    private ResearchGroupMember getMemberOrThrow(Long groupId, Long userId) {
+        return memberRepository.findByResearchGroupIdAndUserId(groupId, userId)
+                .orElseThrow(() -> new AppException(ResearchGroupErrorCode.GROUP_MEMBER_NOT_FOUND));
+    }
+
+    private ResearchGroupDto toGroupDto(ResearchGroup group, boolean includeMembers) {
+        ResearchGroupDto dto = groupMapper.toGroupDto(group);
+        List<ResearchGroupMemberDto> members = memberRepository.findByResearchGroupId(group.getId())
+                .stream()
+                .map(memberMapper::toDto)
+                .toList();
+
+        dto.setMemberCount(members.size());
+        dto.setLeader(members.stream()
+                .filter(member -> member.getRole() == MemberRoleInGroup.LEADER)
+                .findFirst()
+                .orElse(null));
+        if (includeMembers) {
+            dto.setMembers(members);
         }
+        return dto;
     }
 }
