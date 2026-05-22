@@ -1,6 +1,7 @@
 package publication_quality_system.services.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import publication_quality_system.dtos.ResearchProfileDto;
@@ -13,6 +14,8 @@ import publication_quality_system.repositories.ResearchProfileRepository;
 import publication_quality_system.mappers.ResearchProfileMapper;
 import publication_quality_system.repositories.UserRepository;
 import publication_quality_system.services.ResearchProfileService;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -61,5 +64,13 @@ public class ResearchProfileServiceImpl implements ResearchProfileService {
     @Transactional
     public void delete(Long id) {
         profileRepository.deleteById(id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ResearchProfileDto> getAll(Pageable pageable) {
+        return profileRepository.findAll(pageable)
+                .map(mapper::toProfileDto)
+                .getContent();
     }
 }

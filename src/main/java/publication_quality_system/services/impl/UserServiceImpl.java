@@ -1,6 +1,7 @@
 package publication_quality_system.services.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -63,6 +64,14 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new AppException(UserErrorCode.USER_NOT_FOUND));
         userRepository.delete(user);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.List<UserDto> getAll(Pageable pageable) {
+        return userRepository.findAll(pageable)
+                .map(mapper::toUserDto)
+                .getContent();
     }
 }
 

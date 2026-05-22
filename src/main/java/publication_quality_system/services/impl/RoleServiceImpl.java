@@ -2,6 +2,7 @@ package publication_quality_system.services.impl;
 
 import publication_quality_system.services.RoleService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import publication_quality_system.dtos.RoleDto;
@@ -13,7 +14,6 @@ import publication_quality_system.exceptions.UserErrorCode;
 import publication_quality_system.repositories.RoleRepository;
 import publication_quality_system.mappers.RoleMapper;
 import publication_quality_system.repositories.UserRepository;
-import publication_quality_system.services.RoleService;
 
 
 @Service
@@ -48,7 +48,6 @@ public class RoleServiceImpl implements RoleService {
         return mapper.toRoleDto(role);
     }
 
-
     @Override
     @Transactional
     public void assignRole(Long userId, Long roleId) {
@@ -60,10 +59,18 @@ public class RoleServiceImpl implements RoleService {
         user.getRoles().add(role);
         userRepository.save(user);
     }
+
     @Override
     @Transactional
     public void delete(Long id) {
         roleRepository.deleteById(id);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.List<RoleDto> getAll(Pageable pageable) {
+        return roleRepository.findAll(pageable)
+                .map(mapper::toRoleDto)
+                .getContent();
+    }
 }
