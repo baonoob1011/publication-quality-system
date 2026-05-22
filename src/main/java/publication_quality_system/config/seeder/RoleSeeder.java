@@ -3,6 +3,7 @@ package publication_quality_system.config.seeder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import publication_quality_system.base.BaseDataSeeder;
 import publication_quality_system.entities.Permission;
 import publication_quality_system.entities.Role;
 import publication_quality_system.enums.PermissionName;
@@ -17,7 +18,7 @@ import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
-public class RoleSeeder implements DataSeeder {
+public class RoleSeeder implements BaseDataSeeder {
 
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;

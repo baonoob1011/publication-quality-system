@@ -8,6 +8,12 @@ spring:
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://cognito-idp.${AWS_COGNITO_REGION}.amazonaws.com/${AWS_COGNITO_USER_POOL_ID}
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -15,6 +21,18 @@ spring:
       hibernate:
         format_sql: true
     database-platform: org.hibernate.dialect.PostgreSQLDialect
+aws:
+  access-key: ${AWS_ACCESS_KEY}
+  secret-key: ${AWS_SECRET_KEY}
+  region: ${AWS_REGION}
 
+  cognito:
+    region: ${AWS_COGNITO_REGION}
+    user-pool-id: ${AWS_COGNITO_USER_POOL_ID}
+    client-id: ${AWS_COGNITO_CLIENT_ID}
+    client-secret: ${AWS_COGNITO_CLIENT_SECRET}
+
+  s3:
+    bucket: ${AWS_S3_BUCKET}
 server:
   port: 8080
