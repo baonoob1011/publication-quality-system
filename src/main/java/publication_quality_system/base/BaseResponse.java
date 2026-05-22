@@ -32,9 +32,6 @@ public class BaseResponse<T> {
                 .build();
     }
 
-    public static <T> BaseResponse<T> success(T data) {
-        return success(data, "Success");
-    }
 
     public static <T> BaseResponse<T> error(int code, String message) {
         return BaseResponse.<T>builder()

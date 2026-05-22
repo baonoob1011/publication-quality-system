@@ -43,52 +43,120 @@ public class ResearchGroupServiceImpl implements ResearchGroupService {
 
         ResearchGroup group = groupMapper.toGroupEntity(dto);
         group = groupRepository.save(group);
-        return toGroupDto(group, true);
+
+        // Inline toGroupDto(group, true)
+        ResearchGroupDto result = groupMapper.toGroupDto(group);
+        List<ResearchGroupMemberDto> members = memberRepository.findByResearchGroupId(group.getId())
+                .stream()
+                .map(memberMapper::toDto)
+                .toList();
+
+                
+        result.setMemberCount(members.size());
+        result.setLeader(members.stream()
+                .filter(m -> m.getRole() == MemberRoleInGroup.LEADER)
+                .findFirst()
+                .orElse(null));
+        result.setMembers(members);
+
+        return result;
     }
 
     @Override
     @Transactional
     public ResearchGroupDto updateGroup(Long groupId, ResearchGroupDto dto) {
-        ResearchGroup group = getGroupOrThrow(groupId);
+        ResearchGroup group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new AppException(ResearchGroupErrorCode.RESEARCH_GROUP_NOT_FOUND));
+
         if (dto.getName() != null && !dto.getName().equals(group.getName()) && groupRepository.existsByName(dto.getName())) {
             throw new AppException(ResearchGroupErrorCode.RESEARCH_GROUP_NAME_ALREADY_EXISTS);
         }
 
         groupMapper.updateGroupFromDto(dto, group);
         group = groupRepository.save(group);
-        return toGroupDto(group, true);
+
+        // Inline toGroupDto(group, true)
+        ResearchGroupDto result = groupMapper.toGroupDto(group);
+        List<ResearchGroupMemberDto> members = memberRepository.findByResearchGroupId(group.getId())
+                .stream()
+                .map(memberMapper::toDto)
+                .toList();
+
+        result.setMemberCount(members.size());
+        result.setLeader(members.stream()
+                .filter(m -> m.getRole() == MemberRoleInGroup.LEADER)
+                .findFirst()
+                .orElse(null));
+        result.setMembers(members);
+
+        return result;
     }
 
     @Override
     @Transactional(readOnly = true)
     public ResearchGroupDto getGroupById(Long groupId) {
-        return toGroupDto(getGroupOrThrow(groupId), true);
+        ResearchGroup group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new AppException(ResearchGroupErrorCode.RESEARCH_GROUP_NOT_FOUND));
+
+        // Inline toGroupDto(group, true)
+        ResearchGroupDto result = groupMapper.toGroupDto(group);
+        List<ResearchGroupMemberDto> members = memberRepository.findByResearchGroupId(group.getId())
+                .stream()
+                .map(memberMapper::toDto)
+                .toList();
+
+        result.setMemberCount(members.size());
+        result.setLeader(members.stream()
+                .filter(m -> m.getRole() == MemberRoleInGroup.LEADER)
+                .findFirst()
+                .orElse(null));
+        result.setMembers(members);
+
+        return result;
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<ResearchGroupDto> getAllGroups(Pageable pageable) {
         return groupRepository.findAllByDeletedFalse(pageable)
-                .map(group -> toGroupDto(group, false))
+                .map(group -> {
+                    ResearchGroupDto dto = groupMapper.toGroupDto(group);
+                    List<ResearchGroupMemberDto> members = memberRepository.findByResearchGroupId(group.getId())
+                            .stream()
+                            .map(memberMapper::toDto)
+                            .toList();
+                    dto.setMemberCount(members.size());
+                    dto.setLeader(members.stream()
+                            .filter(m -> m.getRole() == MemberRoleInGroup.LEADER)
+                            .findFirst()
+                            .orElse(null));
+                    return dto;
+                })
                 .getContent();
     }
 
     @Override
     @Transactional
     public void deleteGroup(Long groupId) {
-        ResearchGroup group = getGroupOrThrow(groupId);
+        ResearchGroup group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new AppException(ResearchGroupErrorCode.RESEARCH_GROUP_NOT_FOUND));
         groupRepository.delete(group);
     }
 
     @Override
     @Transactional
     public ResearchGroupMemberDto addMember(Long groupId, ResearchGroupMemberDto dto) {
-        ResearchGroup group = getGroupOrThrow(groupId);
-        User user = getUserOrThrow(dto.getUserId());
+        ResearchGroup group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new AppException(ResearchGroupErrorCode.RESEARCH_GROUP_NOT_FOUND));
+
+        User user = userRepository.findById(dto.getUserId())
+                .orElseThrow(() -> new AppException(UserErrorCode.USER_NOT_FOUND));
+
         MemberRoleInGroup role = dto.getRole() == null ? MemberRoleInGroup.MEMBER : dto.getRole();
 
         ResearchGroupMember member = memberRepository.findByResearchGroupIdAndUserId(groupId, dto.getUserId())
                 .orElse(null);
+
         if (member != null && MemberStatus.ACTIVE.equals(member.getStatus())) {
             throw new AppException(ResearchGroupErrorCode.GROUP_MEMBER_ALREADY_EXISTS);
         }
@@ -117,7 +185,9 @@ public class ResearchGroupServiceImpl implements ResearchGroupService {
     @Override
     @Transactional
     public void removeMember(Long groupId, Long userId) {
-        ResearchGroupMember member = getMemberOrThrow(groupId, userId);
+        ResearchGroupMember member = memberRepository.findByResearchGroupIdAndUserId(groupId, userId)
+                .orElseThrow(() -> new AppException(ResearchGroupErrorCode.GROUP_MEMBER_NOT_FOUND));
+
         if (member.getRole() == MemberRoleInGroup.LEADER) {
             throw new AppException(ResearchGroupErrorCode.CANNOT_REMOVE_ONLY_LEADER);
         }
@@ -138,7 +208,9 @@ public class ResearchGroupServiceImpl implements ResearchGroupService {
             return assignGroupLeader(groupId, userId);
         }
 
-        ResearchGroupMember member = getMemberOrThrow(groupId, userId);
+        ResearchGroupMember member = memberRepository.findByResearchGroupIdAndUserId(groupId, userId)
+                .orElseThrow(() -> new AppException(ResearchGroupErrorCode.GROUP_MEMBER_NOT_FOUND));
+
         if (member.getRole() == MemberRoleInGroup.LEADER) {
             throw new AppException(ResearchGroupErrorCode.GROUP_LEADER_REQUIRED);
         }
@@ -154,7 +226,9 @@ public class ResearchGroupServiceImpl implements ResearchGroupService {
             throw new AppException(ResearchGroupErrorCode.VALIDATION_ERROR);
         }
 
-        ResearchGroupMember member = getMemberOrThrow(groupId, userId);
+        ResearchGroupMember member = memberRepository.findByResearchGroupIdAndUserId(groupId, userId)
+                .orElseThrow(() -> new AppException(ResearchGroupErrorCode.GROUP_MEMBER_NOT_FOUND));
+
         if (member.getRole() == MemberRoleInGroup.LEADER && dto.getStatus() != MemberStatus.ACTIVE) {
             throw new AppException(ResearchGroupErrorCode.CANNOT_REMOVE_ONLY_LEADER);
         }
@@ -167,8 +241,11 @@ public class ResearchGroupServiceImpl implements ResearchGroupService {
     @Override
     @Transactional
     public ResearchGroupMemberDto assignGroupLeader(Long groupId, Long userId) {
-        ResearchGroup group = getGroupOrThrow(groupId);
-        User user = getUserOrThrow(userId);
+        ResearchGroup group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new AppException(ResearchGroupErrorCode.RESEARCH_GROUP_NOT_FOUND));
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(UserErrorCode.USER_NOT_FOUND));
 
         memberRepository.findByResearchGroupIdAndRole(groupId, MemberRoleInGroup.LEADER)
                 .filter(oldLeader -> !oldLeader.getUser().getId().equals(userId))
@@ -198,7 +275,10 @@ public class ResearchGroupServiceImpl implements ResearchGroupService {
     @Override
     @Transactional(readOnly = true)
     public List<ResearchGroupMemberDto> getGroupMembers(Long groupId) {
-        getGroupOrThrow(groupId);
+        if (!groupRepository.existsById(groupId)) {
+            throw new AppException(ResearchGroupErrorCode.RESEARCH_GROUP_NOT_FOUND);
+        }
+
         return memberRepository.findByResearchGroupId(groupId)
                 .stream()
                 .map(memberMapper::toDto)
@@ -208,44 +288,26 @@ public class ResearchGroupServiceImpl implements ResearchGroupService {
     @Override
     @Transactional(readOnly = true)
     public List<ResearchGroupDto> getGroupsByUser(Long userId) {
-        getUserOrThrow(userId);
+        if (!userRepository.existsById(userId)) {
+            throw new AppException(UserErrorCode.USER_NOT_FOUND);
+        }
+
         return memberRepository.findByUserId(userId)
                 .stream()
                 .map(ResearchGroupMember::getResearchGroup)
-                .map(group -> toGroupDto(group, false))
+                .map(group -> {
+                    ResearchGroupDto dto = groupMapper.toGroupDto(group);
+                    List<ResearchGroupMemberDto> members = memberRepository.findByResearchGroupId(group.getId())
+                            .stream()
+                            .map(memberMapper::toDto)
+                            .toList();
+                    dto.setMemberCount(members.size());
+                    dto.setLeader(members.stream()
+                            .filter(m -> m.getRole() == MemberRoleInGroup.LEADER)
+                            .findFirst()
+                            .orElse(null));
+                    return dto;
+                })
                 .toList();
-    }
-
-    private ResearchGroup getGroupOrThrow(Long groupId) {
-        return groupRepository.findById(groupId)
-                .orElseThrow(() -> new AppException(ResearchGroupErrorCode.RESEARCH_GROUP_NOT_FOUND));
-    }
-
-    private User getUserOrThrow(Long userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new AppException(UserErrorCode.USER_NOT_FOUND));
-    }
-
-    private ResearchGroupMember getMemberOrThrow(Long groupId, Long userId) {
-        return memberRepository.findByResearchGroupIdAndUserId(groupId, userId)
-                .orElseThrow(() -> new AppException(ResearchGroupErrorCode.GROUP_MEMBER_NOT_FOUND));
-    }
-
-    private ResearchGroupDto toGroupDto(ResearchGroup group, boolean includeMembers) {
-        ResearchGroupDto dto = groupMapper.toGroupDto(group);
-        List<ResearchGroupMemberDto> members = memberRepository.findByResearchGroupId(group.getId())
-                .stream()
-                .map(memberMapper::toDto)
-                .toList();
-
-        dto.setMemberCount(members.size());
-        dto.setLeader(members.stream()
-                .filter(member -> member.getRole() == MemberRoleInGroup.LEADER)
-                .findFirst()
-                .orElse(null));
-        if (includeMembers) {
-            dto.setMembers(members);
-        }
-        return dto;
     }
 }
