@@ -1,4 +1,4 @@
-package publication_quality_system.lab_member.entities;
+package publication_quality_system.entities;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -8,7 +8,7 @@ import lombok.Setter;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.Where;
 import publication_quality_system.base.BaseEntity;
-import publication_quality_system.lab_member.enums.SystemRole;
+import publication_quality_system.enums.RoleName;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -25,7 +25,7 @@ public class Role extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, unique = true)
-    private SystemRole name;
+    private RoleName name;
 
     private String description;
 
