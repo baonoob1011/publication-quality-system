@@ -2,9 +2,6 @@ spring:
   application:
     name: publication_quality_system
 
-server:
-  port: 8080
-
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
@@ -20,3 +17,5 @@ server:
         format_sql: true
     database-platform: org.hibernate.dialect.PostgreSQLDialect
 
+server:
+  port: 8080

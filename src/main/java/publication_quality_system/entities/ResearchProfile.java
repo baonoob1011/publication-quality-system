@@ -1,51 +1,80 @@
-package publication_quality_system.lab_member.entities;
+package publication_quality_system.entities;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
+import org.hibernate.annotations.SQLRestriction;
 import publication_quality_system.base.BaseEntity;
-import publication_quality_system.lab_member.enums.AcademicRank;
-import publication_quality_system.lab_member.enums.MemberStatus;
+import publication_quality_system.enums.AcademicRank;
+import publication_quality_system.enums.MemberStatus;
 
 @Getter
 @Setter
+@Builder
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "research_profiles")
-@SQLDelete(sql = "UPDATE research_profiles SET deleted = true WHERE id=?")
-@Where(clause = "deleted = false")
+@Table(
+        name = "research_profiles"
+)
 public class ResearchProfile extends BaseEntity {
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
     private String avatarUrl;
 
+    @Column(nullable = false, length = 255)
     private String institution;
 
+    @Column(length = 255)
+    private String affiliation;
+
+    @Column(length = 255)
+    private String department;
+
+    @Column(length = 255)
     private String specialization;
 
-    @Column(unique = true)
+    @Column(unique = true, length = 50)
     private String orcid;
 
+    private String googleScholarUrl;
+
+    private String researchGateUrl;
+
+    private String scopusId;
+
+    @Column(columnDefinition = "TEXT")
     private String researchInterests;
 
+    @Column(columnDefinition = "TEXT")
+    private String biography;
+
     @Enumerated(EnumType.STRING)
-    private AcademicRank academicRank;
+    @Column(nullable = false)
+    private AcademicRank academicRank = AcademicRank.RESEARCHER;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private MemberStatus status = MemberStatus.ACTIVE;
 
-    @Column(nullable = false)
-    private boolean deleted = false;
+    @Builder.Default
+    private Integer totalPublications = 0;
 
-    private String createdBy;
-    private String updatedBy;
+    @Builder.Default
+    private Integer totalReviews = 0;
+
+    @Builder.Default
+    private Integer acceptedPapers = 0;
+
+    @Builder.Default
+    private Integer citationCount = 0;
+
+    @Builder.Default
+    private Integer hIndex = 0;
+
+    @Builder.Default
+    private Double contributionScore = 0.0;
 }

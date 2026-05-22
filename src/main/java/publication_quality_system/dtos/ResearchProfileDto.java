@@ -1,10 +1,12 @@
-package publication_quality_system.lab_member.dtos;
+package publication_quality_system.dtos;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
-import publication_quality_system.lab_member.enums.AcademicRank;
-import publication_quality_system.lab_member.enums.MemberStatus;
+import publication_quality_system.enums.AcademicRank;
+import publication_quality_system.enums.MemberStatus;
 
 @Data
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ResearchProfileDto {
     private Long id;
     private Long userId;

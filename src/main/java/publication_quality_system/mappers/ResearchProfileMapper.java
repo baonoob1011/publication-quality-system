@@ -3,10 +3,11 @@ package publication_quality_system.mappers;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
+import org.mapstruct.ReportingPolicy;
 import publication_quality_system.dtos.ResearchProfileDto;
 import publication_quality_system.entities.ResearchProfile;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface ResearchProfileMapper {
 
     @Mapping(source = "user.id", target = "userId")

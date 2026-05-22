@@ -6,7 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
+import org.hibernate.annotations.SQLRestriction;
 import publication_quality_system.base.BaseEntity;
 import publication_quality_system.enums.RoleName;
 
@@ -19,8 +19,6 @@ import java.util.Set;
 @NoArgsConstructor
 @Entity
 @Table(name = "roles")
-@SQLDelete(sql = "UPDATE roles SET deleted = true WHERE id=?")
-@Where(clause = "deleted = false")
 public class Role extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
@@ -28,12 +26,6 @@ public class Role extends BaseEntity {
     private RoleName name;
 
     private String description;
-
-    @Column(nullable = false)
-    private boolean deleted = false;
-
-    private String createdBy;
-    private String updatedBy;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "role_permissions", joinColumns = @JoinColumn(name = "role_id"), inverseJoinColumns = @JoinColumn(name = "permission_id"))

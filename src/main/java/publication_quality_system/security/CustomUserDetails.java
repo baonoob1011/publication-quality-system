@@ -23,13 +23,7 @@ public class CustomUserDetails implements UserDetails {
     public Collection<? extends GrantedAuthority> getAuthorities() {
         Set<GrantedAuthority> authorities = new HashSet<>();
 
-        // Map roles and permissions to GrantedAuthority
         for (Role role : user.getRoles()) {
-            // Include role itself if needed (prefixed with ROLE_)
-            authorities.add(new SimpleGrantedAuthority("ROLE_" + role.getName().name()));
-
-            // Map specific permissions into authorities (so hasAuthority('PAPER_CREATE')
-            // works)
             for (Permission p : role.getPermissions()) {
                 authorities.add(new SimpleGrantedAuthority(p.getName().name()));
             }

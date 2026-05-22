@@ -1,11 +1,13 @@
-package publication_quality_system.lab_member.dtos;
+package publication_quality_system.dtos;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import java.util.Set;
 
 @Data
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class UserDto {
     private Long id;
 
@@ -16,7 +18,6 @@ public class UserDto {
     @Email(message = "Invalid email format")
     private String email;
 
-    // Optional fields for creation/update
     private String password;
 
     private Set<RoleDto> roles;

@@ -10,7 +10,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
+import org.hibernate.annotations.SQLRestriction;
 import publication_quality_system.base.BaseEntity;
 import publication_quality_system.enums.PermissionName;
 
@@ -20,8 +20,6 @@ import publication_quality_system.enums.PermissionName;
 @NoArgsConstructor
 @Entity
 @Table(name = "permissions")
-@SQLDelete(sql = "UPDATE permissions SET deleted = true WHERE id=?")
-@Where(clause = "deleted = false")
 public class Permission extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
@@ -29,10 +27,4 @@ public class Permission extends BaseEntity {
     private PermissionName name;
 
     private String description;
-
-    @Column(nullable = false)
-    private boolean deleted = false;
-
-    private String createdBy;
-    private String updatedBy;
 }

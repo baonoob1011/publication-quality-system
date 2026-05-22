@@ -1,8 +1,9 @@
-package publication_quality_system.lab_member.enums;
+package publication_quality_system.enums;
 
 public enum SystemRole {
     ADMIN,
     LAB_LEADER,
     SENIOR_RESEARCHER,
-    RESEARCHER
+    RESEARCHER,
+    AI_QUALITY_ASSISTANT
 }

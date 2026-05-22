@@ -2,6 +2,7 @@ package publication_quality_system.config.seeder;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import publication_quality_system.entities.Permission;
 import publication_quality_system.entities.Role;
 import publication_quality_system.enums.PermissionName;
@@ -22,21 +23,23 @@ public class RoleSeeder implements DataSeeder {
     private final PermissionRepository permissionRepository;
 
     @Override
+    @Transactional
     public void seed() {
         for (RoleName roleName : RoleName.values()) {
-            Role role = roleRepository.findByName(roleName).orElseGet(() -> {
-                Role newRole = new Role();
-                newRole.setName(roleName);
-                newRole.setDescription("Role for " + roleName.name());
-                newRole.setCreatedBy("SYSTEM");
-                newRole.setUpdatedBy("SYSTEM");
-                return roleRepository.save(newRole);
-            });
+            Role role = roleRepository.findByName(roleName).orElse(null);
+            if (role == null) {
+                role = new Role();
+                role.setName(roleName);
+                role.setDescription("Role for " + roleName.name());
+                role.setCreatedBy("SYSTEM");
+                role.setUpdatedBy("SYSTEM");
+                role = roleRepository.save(role);
+            }
 
             Set<PermissionName> allowedPermissions = getPermissionsForRole(roleName);
             Set<Permission> permissionsToAssign = allowedPermissions.stream()
                     .map(name -> permissionRepository.findByName(name)
-                            .orElseThrow(() -> new RuntimeException("Permission not found: " + name)))
+                            .orElseThrow(() -> new IllegalStateException("Permission not found: " + name)))
                     .collect(Collectors.toSet());
 
             role.setPermissions(permissionsToAssign);
@@ -61,6 +64,10 @@ public class RoleSeeder implements DataSeeder {
                     PermissionName.USER_READ, PermissionName.ROLE_ASSIGN,
                     PermissionName.LAB_MEMBER_CREATE, PermissionName.LAB_MEMBER_READ,
                     PermissionName.LAB_MEMBER_UPDATE, PermissionName.LAB_MEMBER_DELETE,
+                    PermissionName.RESEARCH_GROUP_CREATE, PermissionName.RESEARCH_GROUP_READ,
+                    PermissionName.RESEARCH_GROUP_UPDATE, PermissionName.RESEARCH_GROUP_DELETE,
+                    PermissionName.RESEARCH_PROFILE_CREATE, PermissionName.RESEARCH_PROFILE_READ,
+                    PermissionName.RESEARCH_PROFILE_UPDATE, PermissionName.RESEARCH_PROFILE_DELETE,
                     PermissionName.PAPER_CREATE, PermissionName.PAPER_READ_OWN, PermissionName.PAPER_READ_ALL,
                     PermissionName.PAPER_UPDATE_OWN, PermissionName.PAPER_UPDATE_ALL,
                     PermissionName.PAPER_DELETE_OWN, PermissionName.PAPER_DELETE_ALL,
@@ -84,6 +91,7 @@ public class RoleSeeder implements DataSeeder {
         } else if (roleName == RoleName.SENIOR_RESEARCHER) {
             permissions.addAll(Arrays.asList(
                     PermissionName.LAB_MEMBER_READ,
+                    PermissionName.RESEARCH_GROUP_READ, PermissionName.RESEARCH_PROFILE_READ,
                     PermissionName.PAPER_CREATE, PermissionName.PAPER_READ_OWN,
                     PermissionName.PAPER_UPDATE_OWN, PermissionName.PAPER_DELETE_OWN,
                     PermissionName.PAPER_SUBMIT_INTERNAL_REVIEW,
@@ -105,6 +113,7 @@ public class RoleSeeder implements DataSeeder {
         } else if (roleName == RoleName.RESEARCHER) {
             permissions.addAll(Arrays.asList(
                     PermissionName.LAB_MEMBER_READ,
+                    PermissionName.RESEARCH_GROUP_READ, PermissionName.RESEARCH_PROFILE_READ,
                     PermissionName.PAPER_CREATE, PermissionName.PAPER_READ_OWN,
                     PermissionName.PAPER_UPDATE_OWN, PermissionName.PAPER_DELETE_OWN,
                     PermissionName.PAPER_SUBMIT_INTERNAL_REVIEW,

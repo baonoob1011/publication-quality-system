@@ -1,11 +1,11 @@
-package publication_quality_system.lab_member.dtos;
+package publication_quality_system.dtos;
 
 import lombok.Data;
-import publication_quality_system.lab_member.enums.SystemRole;
+import publication_quality_system.enums.RoleName;
 
 @Data
 public class RoleDto {
     private Long id;
-    private SystemRole name;
+    private RoleName name;
     private String description;
 }

@@ -1,5 +1,6 @@
 package publication_quality_system.base;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 public abstract class BaseController {
@@ -7,7 +8,7 @@ public abstract class BaseController {
         return ResponseEntity.ok(BaseResponse.success(data, message));
     }
     protected <T> ResponseEntity<BaseResponse<T>> created(T data) {
-        return ResponseEntity.ok(BaseResponse.created(data));
+        return ResponseEntity.status(HttpStatus.CREATED).body(BaseResponse.created(data));
     }
 
 }

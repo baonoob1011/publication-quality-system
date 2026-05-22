@@ -1,4 +1,4 @@
-package publication_quality_system.lab_member.enums;
+package publication_quality_system.enums;
 
 public enum MemberStatus {
     ACTIVE,
