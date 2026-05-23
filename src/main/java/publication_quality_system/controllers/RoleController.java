@@ -15,9 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import publication_quality_system.base.BaseController;
 import publication_quality_system.base.BaseResponse;
-import publication_quality_system.dtos.CreateRoleDto;
 import publication_quality_system.dtos.RoleDto;
-import publication_quality_system.dtos.UpdateRoleDto;
 import publication_quality_system.dtos.UpdateUserRolesDto;
 import publication_quality_system.dtos.UserRoleDto;
 import publication_quality_system.services.RoleService;
@@ -33,14 +31,14 @@ public class RoleController extends BaseController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('ROLE_CREATE')")
-    public ResponseEntity<BaseResponse<RoleDto>> create(@Valid @RequestBody CreateRoleDto dto) {
-        return created(roleService.createRole(dto));
+    public ResponseEntity<BaseResponse<RoleDto>> create(@Valid @RequestBody RoleDto dto) {
+        return created(roleService.create(dto));
     }
 
     @GetMapping("/{roleId}")
     @PreAuthorize("hasAuthority('ROLE_READ')")
     public ResponseEntity<BaseResponse<RoleDto>> getById(@PathVariable Long roleId) {
-        return success(roleService.getRoleById(roleId), "Role retrieved successfully");
+        return success(roleService.getById(roleId), "Role retrieved successfully");
     }
 
     @GetMapping
@@ -53,14 +51,14 @@ public class RoleController extends BaseController {
     @PreAuthorize("hasAuthority('ROLE_UPDATE')")
     public ResponseEntity<BaseResponse<RoleDto>> update(
             @PathVariable Long roleId,
-            @Valid @RequestBody UpdateRoleDto dto) {
-        return success(roleService.updateRole(roleId, dto), "Role updated successfully");
+            @Valid @RequestBody RoleDto dto) {
+        return success(roleService.update(roleId, dto), "Role updated successfully");
     }
 
     @DeleteMapping("/{roleId}")
     @PreAuthorize("hasAuthority('ROLE_DELETE')")
     public ResponseEntity<BaseResponse<Void>> delete(@PathVariable Long roleId) {
-        roleService.deleteRole(roleId);
+        roleService.delete(roleId);
         return success(null, "Role deleted successfully");
     }
 

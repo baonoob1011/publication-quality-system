@@ -54,10 +54,12 @@ public class ResearchProfile extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Builder.Default
     private AcademicRank academicRank = AcademicRank.RESEARCHER;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Builder.Default
     private MemberStatus status = MemberStatus.ACTIVE;
 
     @Builder.Default

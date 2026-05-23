@@ -33,10 +33,12 @@ public class ResearchGroupMember extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Builder.Default
     private MemberRoleInGroup role = MemberRoleInGroup.MEMBER;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Builder.Default
     private MemberStatus status = MemberStatus.ACTIVE;
 
     private LocalDate joinedAt;

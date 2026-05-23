@@ -1,6 +1,9 @@
 package publication_quality_system.config.seeder;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import publication_quality_system.base.BaseDataSeeder;
@@ -10,22 +13,35 @@ import publication_quality_system.enums.PermissionName;
 import publication_quality_system.enums.RoleName;
 import publication_quality_system.repositories.PermissionRepository;
 import publication_quality_system.repositories.RoleRepository;
+import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderClient;
+import software.amazon.awssdk.services.cognitoidentityprovider.model.CognitoIdentityProviderException;
+import software.amazon.awssdk.services.cognitoidentityprovider.model.CreateGroupRequest;
+import software.amazon.awssdk.services.cognitoidentityprovider.model.GetGroupRequest;
+import software.amazon.awssdk.services.cognitoidentityprovider.model.ResourceNotFoundException;
 
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class RoleSeeder implements BaseDataSeeder {
 
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
+    private final JdbcTemplate jdbcTemplate;
+    private final CognitoIdentityProviderClient cognitoClient;
+
+    @Value("${aws.cognito.user-pool-id:}")
+    private String userPoolId;
 
     @Override
     @Transactional
     public void seed() {
+        fixRoleNameConstraint();
+
         for (RoleName roleName : RoleName.values()) {
             Role role = roleRepository.findByName(roleName.name()).orElse(null);
             if (role == null) {
@@ -46,11 +62,110 @@ public class RoleSeeder implements BaseDataSeeder {
             role.setPermissions(permissionsToAssign);
             roleRepository.save(role);
         }
+
+        syncRolesToCognitoGroups();
     }
 
     @Override
     public int getOrder() {
         return 2; // Roles must be seeded after permissions
+    }
+
+    private void fixRoleNameConstraint() {
+        try {
+            jdbcTemplate.execute("""
+                    DO $$
+                    DECLARE
+                        constraint_record RECORD;
+                    BEGIN
+                        IF to_regclass('public.roles') IS NOT NULL THEN
+                            FOR constraint_record IN
+                                SELECT conname
+                                FROM pg_constraint
+                                WHERE conrelid = 'public.roles'::regclass
+                                  AND contype = 'c'
+                                  AND pg_get_constraintdef(oid) LIKE '%name%'
+                            LOOP
+                                EXECUTE format('ALTER TABLE roles DROP CONSTRAINT IF EXISTS %I', constraint_record.conname);
+                            END LOOP;
+                        END IF;
+                    END $$;
+                    """);
+            log.info("Role name constraints fixed successfully");
+        } catch (Exception e) {
+            log.warn("Skip fixing role name constraints: {}", e.getMessage());
+        }
+    }
+
+    private void syncRolesToCognitoGroups() {
+        if (userPoolId == null || userPoolId.isBlank()) {
+            log.warn("Cognito groups were not synced because aws.cognito.user-pool-id is missing");
+            return;
+        }
+
+        for (Role role : roleRepository.findAll()) {
+            String groupName = resolveGroupName(role);
+            if (groupName == null || groupName.isBlank()) {
+                continue;
+            }
+
+            try {
+                if (cognitoGroupExists(groupName)) {
+                    log.info("Cognito group already exists: {}", groupName);
+                    continue;
+                }
+
+                createCognitoGroup(groupName);
+                log.info("Cognito group created successfully: {}", groupName);
+            } catch (CognitoIdentityProviderException exception) {
+                logCognitoError(groupName, exception);
+            }
+        }
+    }
+
+    private boolean cognitoGroupExists(String groupName) {
+        try {
+            cognitoClient.getGroup(GetGroupRequest.builder()
+                    .userPoolId(userPoolId)
+                    .groupName(groupName)
+                    .build());
+            return true;
+        } catch (ResourceNotFoundException exception) {
+            return false;
+        }
+    }
+
+    private void createCognitoGroup(String groupName) {
+        cognitoClient.createGroup(CreateGroupRequest.builder()
+                .userPoolId(userPoolId)
+                .groupName(groupName)
+                .description("Auto-created group for role " + groupName)
+                .build());
+    }
+
+    private String resolveGroupName(Role role) {
+        if (role == null || role.getName() == null) {
+            return null;
+        }
+        return role.getName().toString();
+    }
+
+    private void logCognitoError(String groupName, CognitoIdentityProviderException exception) {
+        String errorCode = exception.awsErrorDetails() != null
+                ? exception.awsErrorDetails().errorCode()
+                : "UNKNOWN";
+        String errorMessage = exception.awsErrorDetails() != null
+                ? exception.awsErrorDetails().errorMessage()
+                : exception.getMessage();
+        int statusCode = exception.statusCode();
+
+        log.error(
+                "Failed to sync Cognito group {}. code={}, message={}, status={}",
+                groupName,
+                errorCode,
+                errorMessage,
+                statusCode
+        );
     }
 
     private Set<PermissionName> getPermissionsForRole(RoleName roleName) {
