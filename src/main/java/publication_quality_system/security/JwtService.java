@@ -1,4 +1,4 @@
-package publication_quality_system.services;
+package publication_quality_system.security;
 
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
@@ -8,17 +8,6 @@ import java.util.List;
 
 @Service
 public class JwtService {
-
-    public String getUsername(Jwt jwt) {
-        String username = jwt.getClaimAsString("username");
-        if (username == null || username.isBlank()) {
-            username = jwt.getClaimAsString("cognito:username");
-        }
-        if (username == null || username.isBlank()) {
-            username = getEmail(jwt);
-        }
-        return username;
-    }
 
     public String getEmail(Jwt jwt) {
         return jwt.getClaimAsString("email");

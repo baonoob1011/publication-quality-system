@@ -13,7 +13,7 @@ import publication_quality_system.entities.User;
 import publication_quality_system.exceptions.AppException;
 import publication_quality_system.exceptions.RoleErrorCode;
 import publication_quality_system.exceptions.UserErrorCode;
-import publication_quality_system.mapper.RoleMapper;
+import publication_quality_system.mappers.RoleMapper;
 import publication_quality_system.repositories.PermissionRepository;
 import publication_quality_system.repositories.RoleRepository;
 import publication_quality_system.repositories.UserRepository;
@@ -62,7 +62,7 @@ public class RoleServiceImpl implements RoleService {
         if (user.getRoles().add(role)) {
             userRepository.save(user);
         }
-        cognitoGroupService.addUserToGroup(user.getUsername(), role.getName());
+        cognitoGroupService.addUserToGroup(user.getEmail(), role.getName());
         return getUserRoles(userId);
     }
 
@@ -74,7 +74,7 @@ public class RoleServiceImpl implements RoleService {
 
         user.getRoles().remove(role);
         userRepository.save(user);
-        cognitoGroupService.removeUserFromGroup(user.getUsername(), role.getName());
+        cognitoGroupService.removeUserFromGroup(user.getEmail(), role.getName());
         return getUserRoles(userId);
     }
 
@@ -99,11 +99,11 @@ public class RoleServiceImpl implements RoleService {
 
         for (Role role : rolesToAdd) {
             cognitoGroupService.ensureGroupExists(role.getName());
-            cognitoGroupService.addUserToGroup(user.getUsername(), role.getName());
+            cognitoGroupService.addUserToGroup(user.getEmail(), role.getName());
         }
 
         for (Role role : rolesToRemove) {
-            cognitoGroupService.removeUserFromGroup(user.getUsername(), role.getName());
+            cognitoGroupService.removeUserFromGroup(user.getEmail(), role.getName());
         }
 
         user.setRoles(targetRoles);
@@ -187,8 +187,8 @@ public class RoleServiceImpl implements RoleService {
         if (!oldName.equals(newName)) {
             cognitoGroupService.createGroup(newName, dto.getDescription());
             for (User user : usersWithRole) {
-                cognitoGroupService.addUserToGroup(user.getUsername(), newName);
-                cognitoGroupService.removeUserFromGroup(user.getUsername(), oldName);
+                cognitoGroupService.addUserToGroup(user.getEmail(), newName);
+                cognitoGroupService.removeUserFromGroup(user.getEmail(), oldName);
             }
             cognitoGroupService.deleteGroup(oldName);
         }
@@ -214,7 +214,7 @@ public class RoleServiceImpl implements RoleService {
         for (User user : usersWithRole) {
             user.getRoles().remove(role);
             userRepository.save(user);
-            cognitoGroupService.removeUserFromGroup(user.getUsername(), role.getName());
+            cognitoGroupService.removeUserFromGroup(user.getEmail(), role.getName());
         }
 
         roleRepository.delete(role);

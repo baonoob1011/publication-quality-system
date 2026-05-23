@@ -9,7 +9,7 @@ import java.util.Collection;
 @Data
 @AllArgsConstructor
 public class CurrentUser {
-    private String username;
+    private String fullName;
     private String email;
     private String sub;
     private Collection<? extends GrantedAuthority> authorities;

@@ -13,6 +13,7 @@ import publication_quality_system.dtos.RegisterRequestDto;
 import publication_quality_system.entities.User;
 import publication_quality_system.exceptions.AppException;
 import publication_quality_system.exceptions.AuthErrorCode;
+import publication_quality_system.mappers.AuthMapper;
 import publication_quality_system.repositories.UserRepository;
 import publication_quality_system.services.AuthService;
 import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderClient;
@@ -20,7 +21,6 @@ import software.amazon.awssdk.services.cognitoidentityprovider.model.AdminConfir
 import software.amazon.awssdk.services.cognitoidentityprovider.model.AdminUpdateUserAttributesRequest;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.AttributeType;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.AuthFlowType;
-import software.amazon.awssdk.services.cognitoidentityprovider.model.AuthenticationResultType;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.GlobalSignOutRequest;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.InitiateAuthRequest;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.InitiateAuthResponse;
@@ -51,35 +51,38 @@ public class AuthServiceImpl implements AuthService {
     private final CognitoProperties cognitoProperties;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuthMapper authMapper;
 
     @Override
     @Transactional
     public AuthResponseDto register(RegisterRequestDto request) {
-        if (userRepository.findByUsername(request.getEmail()).isPresent()
-                || userRepository.findByEmail(request.getEmail()).isPresent()) {
+        String normalizedEmail = normalizeEmail(request.getEmail());
+        String fullName = request.getFullName().trim();
+
+        if (userRepository.existsByEmail(normalizedEmail)) {
             throw new AppException(AuthErrorCode.USER_ALREADY_EXISTS);
         }
 
         try {
             SignUpRequest.Builder signUpBuilder = SignUpRequest.builder()
                     .clientId(cognitoProperties.getClientId())
-                    .username(request.getEmail())
+                    .username(normalizedEmail)
                     .password(request.getPassword())
                     .userAttributes(
-                            AttributeType.builder().name("email").value(request.getEmail()).build(),
-                            AttributeType.builder().name("name").value(resolveFullName(request)).build()
+                            AttributeType.builder().name("email").value(normalizedEmail).build(),
+                            AttributeType.builder().name("name").value(fullName).build()
                     );
 
             if (hasClientSecret()) {
-                signUpBuilder.secretHash(calculateSecretHash(request.getEmail()));
+                signUpBuilder.secretHash(calculateSecretHash(normalizedEmail));
             }
 
             SignUpResponse signUpResponse = cognitoClient.signUp(signUpBuilder.build());
-            confirmAndVerifyEmailIfNeeded(request.getEmail(), signUpResponse);
-            saveLocalUser(request);
+            confirmAndVerifyEmailIfNeeded(normalizedEmail, signUpResponse);
+            saveLocalUser(normalizedEmail, fullName, request.getPassword());
 
             LoginRequestDto loginRequest = new LoginRequestDto();
-            loginRequest.setEmail(request.getEmail());
+            loginRequest.setEmail(normalizedEmail);
             loginRequest.setPassword(request.getPassword());
             return login(loginRequest);
         } catch (UsernameExistsException exception) {
@@ -91,11 +94,13 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public AuthResponseDto login(LoginRequestDto request) {
+        String normalizedEmail = normalizeEmail(request.getEmail());
+
         try {
             Map<String, String> authParameters = new HashMap<>();
-            authParameters.put(USERNAME, request.getEmail());
+            authParameters.put(USERNAME, normalizedEmail);
             authParameters.put(PASSWORD, request.getPassword());
-            putSecretHash(authParameters, request.getEmail());
+            putSecretHash(authParameters, normalizedEmail);
 
             InitiateAuthResponse response = cognitoClient.initiateAuth(InitiateAuthRequest.builder()
                     .clientId(cognitoProperties.getClientId())
@@ -103,11 +108,13 @@ public class AuthServiceImpl implements AuthService {
                     .authParameters(authParameters)
                     .build());
 
-            AuthResponseDto authResponse = toAuthResponse(response.authenticationResult());
-            authResponse.setUsername(request.getEmail());
-            authResponse.setEmail(request.getEmail());
-            userRepository.findByEmail(request.getEmail())
-                    .ifPresent(user -> authResponse.setEmail(user.getEmail()));
+            AuthResponseDto authResponse = authMapper.toAuthResponse(response.authenticationResult());
+            authResponse.setEmail(normalizedEmail);
+            userRepository.findByEmail(normalizedEmail)
+                    .ifPresent(user -> {
+                        authResponse.setEmail(user.getEmail());
+                        authResponse.setFullName(user.getFullName());
+                    });
             return authResponse;
         } catch (UserNotConfirmedException exception) {
             throw new AppException(AuthErrorCode.USER_NOT_CONFIRMED);
@@ -128,7 +135,7 @@ public class AuthServiceImpl implements AuthService {
                     .authParameters(authParameters)
                     .build());
 
-            AuthResponseDto authResponse = toAuthResponse(response.authenticationResult());
+            AuthResponseDto authResponse = authMapper.toAuthResponse(response.authenticationResult());
             if (authResponse.getRefreshToken() == null) {
                 authResponse.setRefreshToken(request.getRefreshToken());
             }
@@ -145,11 +152,11 @@ public class AuthServiceImpl implements AuthService {
                 .build());
     }
 
-    private void saveLocalUser(RegisterRequestDto request) {
+    private void saveLocalUser(String email, String fullName, String password) {
         User user = new User();
-        user.setUsername(request.getEmail());
-        user.setEmail(request.getEmail());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setFullName(fullName);
+        user.setEmail(email);
+        user.setPassword(passwordEncoder.encode(password));
         userRepository.save(user);
     }
 
@@ -169,16 +176,6 @@ public class AuthServiceImpl implements AuthService {
                         .value("true")
                         .build())
                 .build());
-    }
-
-    private AuthResponseDto toAuthResponse(AuthenticationResultType result) {
-        AuthResponseDto response = new AuthResponseDto();
-        response.setAccessToken(result.accessToken());
-        response.setRefreshToken(result.refreshToken());
-        response.setIdToken(result.idToken());
-        response.setTokenType(result.tokenType());
-        response.setExpiresIn(result.expiresIn());
-        return response;
     }
 
     private void putSecretHash(Map<String, String> authParameters, String username) {
@@ -206,10 +203,7 @@ public class AuthServiceImpl implements AuthService {
         return cognitoProperties.getClientSecret() != null && !cognitoProperties.getClientSecret().isBlank();
     }
 
-    private String resolveFullName(RegisterRequestDto request) {
-        if (request.getFullName() == null || request.getFullName().isBlank()) {
-            return request.getEmail();
-        }
-        return request.getFullName();
+    private String normalizeEmail(String email) {
+        return email == null ? null : email.trim().toLowerCase();
     }
 }

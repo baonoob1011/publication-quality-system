@@ -18,8 +18,6 @@ import java.util.Set;
 @Table(
         name = "research_groups"
 )
-@SQLDelete(sql = "UPDATE research_groups SET deleted = true WHERE id=?")
-@SQLRestriction("deleted = false")
 public class ResearchGroup extends BaseEntity {
 
     @Column(nullable = false, unique = true, length = 255)

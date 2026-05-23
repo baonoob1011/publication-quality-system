@@ -22,6 +22,6 @@ public interface ResearchGroupMemberMapper {
         if (user == null) {
             return null;
         }
-        return user.getUsername();
+        return user.getFullName();
     }
 }

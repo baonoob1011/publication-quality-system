@@ -15,11 +15,13 @@ import java.util.List;
 public class DataInitializer implements CommandLineRunner {
 
     private final List<BaseDataSeeder> seeders;
+    private final UserFullNameMigration userFullNameMigration;
 
     @Override
     public void run(String... args) {
 
         try {
+            userFullNameMigration.migrate();
             seeders.stream()
                     .sorted(Comparator.comparingInt(BaseDataSeeder::getOrder))
                     .forEach(BaseDataSeeder::seed);

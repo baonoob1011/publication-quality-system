@@ -31,13 +31,14 @@ aws:
     user-pool-id: ${AWS_COGNITO_USER_POOL_ID}
     client-id: ${AWS_COGNITO_CLIENT_ID}
     client-secret: ${AWS_COGNITO_CLIENT_SECRET}
+    admin-group-name: ${AWS_COGNITO_ADMIN_GROUP_NAME:ADMIN}
 
   s3:
     bucket: ${AWS_S3_BUCKET}
 
 app:
   admin:
-    username: ${APP_ADMIN_USERNAME:}
+    full-name: ${APP_ADMIN_FULL_NAME:}
     email: ${APP_ADMIN_EMAIL:}
     password: ${APP_ADMIN_PASSWORD:}
 

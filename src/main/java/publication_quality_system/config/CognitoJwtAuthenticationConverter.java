@@ -13,7 +13,7 @@ import publication_quality_system.entities.Role;
 import publication_quality_system.entities.User;
 import publication_quality_system.repositories.UserRepository;
 import publication_quality_system.security.CurrentUser;
-import publication_quality_system.services.JwtService;
+import publication_quality_system.security.JwtService;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -32,17 +32,18 @@ public class CognitoJwtAuthenticationConverter implements Converter<Jwt, Abstrac
 
     @Override
     public AbstractAuthenticationToken convert(Jwt jwt) {
-        String username = jwtService.getUsername(jwt);
         String email = jwtService.getEmail(jwt);
         String sub = jwtService.getSub(jwt);
+        Optional<User> localUser = findLocalUser(email);
+        String fullName = localUser.map(User::getFullName).orElse(null);
 
         Set<GrantedAuthority> authorities = new HashSet<>();
         addGroupAuthorities(jwt, authorities);
         addScopeAuthorities(jwt, authorities);
-        addLocalPermissionAuthorities(username, email, authorities);
+        addLocalPermissionAuthorities(localUser, authorities);
 
-        JwtAuthenticationToken authenticationToken = new JwtAuthenticationToken(jwt, authorities, resolvePrincipalName(username, email, sub));
-        authenticationToken.setDetails(new CurrentUser(username, email, sub, authorities));
+        JwtAuthenticationToken authenticationToken = new JwtAuthenticationToken(jwt, authorities, resolvePrincipalName(email, sub));
+        authenticationToken.setDetails(new CurrentUser(fullName, email, sub, authorities));
         return authenticationToken;
     }
 
@@ -67,8 +68,7 @@ public class CognitoJwtAuthenticationConverter implements Converter<Jwt, Abstrac
         }
     }
 
-    private void addLocalPermissionAuthorities(String username, String email, Set<GrantedAuthority> authorities) {
-        Optional<User> user = findLocalUser(username, email);
+    private void addLocalPermissionAuthorities(Optional<User> user, Set<GrantedAuthority> authorities) {
         user.map(User::getRoles)
                 .stream()
                 .flatMap(Collection::stream)
@@ -80,23 +80,14 @@ public class CognitoJwtAuthenticationConverter implements Converter<Jwt, Abstrac
                 .forEach(authorities::add);
     }
 
-    private Optional<User> findLocalUser(String username, String email) {
+    private Optional<User> findLocalUser(String email) {
         if (email != null && !email.isBlank()) {
-            Optional<User> user = userRepository.findByEmail(email);
-            if (user.isPresent()) {
-                return user;
-            }
-        }
-        if (username != null && !username.isBlank()) {
-            return userRepository.findByUsername(username);
+            return userRepository.findByEmail(email);
         }
         return Optional.empty();
     }
 
-    private String resolvePrincipalName(String username, String email, String sub) {
-        if (username != null && !username.isBlank()) {
-            return username;
-        }
+    private String resolvePrincipalName(String email, String sub) {
         if (email != null && !email.isBlank()) {
             return email;
         }

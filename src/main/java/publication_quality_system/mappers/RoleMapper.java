@@ -1,8 +1,9 @@
-package publication_quality_system.mapper;
+package publication_quality_system.mappers;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
+import org.mapstruct.ReportingPolicy;
 import publication_quality_system.dtos.RoleDto;
 import publication_quality_system.dtos.UserRoleDto;
 import publication_quality_system.entities.Permission;
@@ -12,7 +13,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface RoleMapper {
 
     RoleDto toDto(Role role);

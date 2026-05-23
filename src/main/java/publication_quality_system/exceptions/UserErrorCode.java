@@ -7,7 +7,7 @@ import publication_quality_system.base.BaseErrorCode;
 @RequiredArgsConstructor
 public enum UserErrorCode implements BaseErrorCode {
     USER_NOT_FOUND("User not found", HttpStatus.NOT_FOUND),
-    USERNAME_ALREADY_EXISTS("Username already exists", HttpStatus.CONFLICT),
+    EMAIL_ALREADY_EXISTS("Email already exists", HttpStatus.CONFLICT),
     VALIDATION_ERROR("Validation error", HttpStatus.BAD_REQUEST);
 
     private final String message;

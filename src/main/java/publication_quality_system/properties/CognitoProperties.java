@@ -12,4 +12,5 @@ public class CognitoProperties {
     private String userPoolId;
     private String clientId;
     private String clientSecret;
+    private String adminGroupName = "ADMIN";
 }

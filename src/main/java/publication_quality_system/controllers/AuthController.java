@@ -55,11 +55,11 @@ public class AuthController extends BaseController {
     public ResponseEntity<BaseResponse<CurrentUserDto>> me(Authentication authentication) {
         CurrentUserDto dto = new CurrentUserDto();
         if (authentication.getDetails() instanceof CurrentUser currentUser) {
-            dto.setUsername(currentUser.getUsername());
+            dto.setFullName(currentUser.getFullName());
             dto.setEmail(currentUser.getEmail());
             dto.setSub(currentUser.getSub());
         } else {
-            dto.setUsername(authentication.getName());
+            dto.setEmail(authentication.getName());
         }
 
         List<String> authorities = authentication.getAuthorities()

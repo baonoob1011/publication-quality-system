@@ -11,6 +11,6 @@ public class AuthResponseDto {
     private String idToken;
     private String tokenType;
     private Integer expiresIn;
-    private String username;
+    private String fullName;
     private String email;
 }

@@ -3,6 +3,7 @@ package publication_quality_system.dtos;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 import java.util.Set;
 
@@ -11,8 +12,9 @@ import java.util.Set;
 public class UserDto {
     private Long id;
 
-    @NotBlank(message = "Username cannot be empty")
-    private String username;
+    @NotBlank(message = "Full name cannot be empty")
+    @Size(max = 255, message = "Full name cannot exceed 255 characters")
+    private String fullName;
 
     @NotBlank(message = "Email cannot be empty")
     @Email(message = "Invalid email format")

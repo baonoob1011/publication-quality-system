@@ -6,7 +6,7 @@ import java.util.List;
 
 @Data
 public class CurrentUserDto {
-    private String username;
+    private String fullName;
     private String email;
     private String sub;
     private List<String> authorities;

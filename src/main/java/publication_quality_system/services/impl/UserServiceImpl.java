@@ -27,8 +27,8 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserDto create(UserDto dto) {
-        if (userRepository.findByUsername(dto.getUsername()).isPresent()) {
-            throw new AppException(UserErrorCode.USERNAME_ALREADY_EXISTS);
+        if (userRepository.existsByEmail(dto.getEmail())) {
+            throw new AppException(UserErrorCode.EMAIL_ALREADY_EXISTS);
         }
         User user = mapper.toUserEntity(dto);
         if (dto.getPassword() != null) {
@@ -74,4 +74,3 @@ public class UserServiceImpl implements UserService {
                 .getContent();
     }
 }
-
