@@ -13,6 +13,7 @@ import publication_quality_system.entities.User;
 import publication_quality_system.exceptions.AppException;
 import publication_quality_system.exceptions.RoleErrorCode;
 import publication_quality_system.exceptions.UserErrorCode;
+import publication_quality_system.mapper.RoleMapper;
 import publication_quality_system.repositories.PermissionRepository;
 import publication_quality_system.repositories.RoleRepository;
 import publication_quality_system.repositories.UserRepository;
@@ -34,18 +35,13 @@ public class RoleServiceImpl implements RoleService {
     private final UserRepository userRepository;
     private final PermissionRepository permissionRepository;
     private final CognitoGroupService cognitoGroupService;
-
-
-
-
-
-
+    private final RoleMapper roleMapper;
 
     @Override
     @Transactional(readOnly = true)
     public List<RoleDto> getAllRoles(Pageable pageable) {
         return roleRepository.findAll(pageable)
-                .map(this::toRoleDto)
+                .map(roleMapper::toDto)
                 .getContent();
     }
 
@@ -53,9 +49,7 @@ public class RoleServiceImpl implements RoleService {
     @Transactional(readOnly = true)
     public List<UserRoleDto> getUserRoles(Long userId) {
         User user = getUserOrThrow(userId);
-        return user.getRoles().stream()
-                .map(this::toUserRoleDto)
-                .toList();
+        return roleMapper.toUserRoleDtoList(user.getRoles().stream().toList());
     }
 
     @Override
@@ -147,30 +141,6 @@ public class RoleServiceImpl implements RoleService {
                 .collect(Collectors.toSet());
     }
 
-    private RoleDto toRoleDto(Role role) {
-        RoleDto dto = new RoleDto();
-        dto.setId(role.getId());
-        dto.setName(role.getName());
-        dto.setDescription(role.getDescription());
-        dto.setPermissions(permissionNames(role));
-        return dto;
-    }
-
-    private UserRoleDto toUserRoleDto(Role role) {
-        UserRoleDto dto = new UserRoleDto();
-        dto.setId(role.getId());
-        dto.setName(role.getName());
-        dto.setDescription(role.getDescription());
-        dto.setPermissions(permissionNames(role));
-        return dto;
-    }
-
-    private Set<String> permissionNames(Role role) {
-        return role.getPermissions().stream()
-                .map(Permission::getName)
-                .collect(Collectors.toSet());
-    }
-
     @Override
     @Transactional
     public RoleDto create(RoleDto dto) {
@@ -183,12 +153,11 @@ public class RoleServiceImpl implements RoleService {
         cognitoGroupService.createGroup(roleName, dto.getDescription());
 
         try {
-            Role role = new Role();
+            Role role = roleMapper.toEntity(dto);
             role.setName(roleName);
-            role.setDescription(dto.getDescription());
             role.setPermissions(permissions);
             role = roleRepository.save(role);
-            return toRoleDto(role);
+            return roleMapper.toDto(role);
         } catch (RuntimeException exception) {
             cognitoGroupService.deleteGroup(roleName);
             throw exception;
@@ -198,7 +167,7 @@ public class RoleServiceImpl implements RoleService {
     @Override
     @Transactional(readOnly = true)
     public RoleDto getById(Long roleId) {
-        return toRoleDto(getRoleOrThrow(roleId));
+        return roleMapper.toDto(getRoleOrThrow(roleId));
     }
 
     @Override
@@ -224,13 +193,13 @@ public class RoleServiceImpl implements RoleService {
             cognitoGroupService.deleteGroup(oldName);
         }
 
+        roleMapper.updateRoleFromDto(dto, role);
         role.setName(newName);
-        role.setDescription(dto.getDescription());
         if (dto.getPermissions() != null) {
             role.setPermissions(loadPermissions(dto.getPermissions()));
         }
 
-        return toRoleDto(roleRepository.save(role));
+        return roleMapper.toDto(roleRepository.save(role));
     }
 
     @Override

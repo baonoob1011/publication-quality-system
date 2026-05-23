@@ -14,52 +14,30 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import publication_quality_system.base.BaseController;
+import publication_quality_system.base.BaseCrudController;
 import publication_quality_system.base.BaseResponse;
 import publication_quality_system.dtos.RoleDto;
 import publication_quality_system.dtos.UpdateUserRolesDto;
 import publication_quality_system.dtos.UserRoleDto;
 import publication_quality_system.services.RoleService;
+import publication_quality_system.services.UserService;
 
 import java.util.List;
 
 @RestController
-@RequiredArgsConstructor
 @RequestMapping("/api/roles")
-public class RoleController extends BaseController {
+public class RoleController extends BaseCrudController<RoleDto, Long> {
 
     private final RoleService roleService;
-
-    @PostMapping
-    @PreAuthorize("hasAuthority('ROLE_CREATE')")
-    public ResponseEntity<BaseResponse<RoleDto>> create(@Valid @RequestBody RoleDto dto) {
-        return created(roleService.create(dto));
-    }
-
-    @GetMapping("/{roleId}")
-    @PreAuthorize("hasAuthority('ROLE_READ')")
-    public ResponseEntity<BaseResponse<RoleDto>> getById(@PathVariable Long roleId) {
-        return success(roleService.getById(roleId), "Role retrieved successfully");
+    public RoleController(RoleService roleService, RoleService roleService1) {
+        super(roleService);
+        this.roleService = roleService1;
     }
 
     @GetMapping
     @PreAuthorize("hasAuthority('ROLE_READ')")
     public ResponseEntity<BaseResponse<List<RoleDto>>> getAll(Pageable pageable) {
         return success(roleService.getAllRoles(pageable), "Roles retrieved successfully");
-    }
-
-    @PutMapping("/{roleId}")
-    @PreAuthorize("hasAuthority('ROLE_UPDATE')")
-    public ResponseEntity<BaseResponse<RoleDto>> update(
-            @PathVariable Long roleId,
-            @Valid @RequestBody RoleDto dto) {
-        return success(roleService.update(roleId, dto), "Role updated successfully");
-    }
-
-    @DeleteMapping("/{roleId}")
-    @PreAuthorize("hasAuthority('ROLE_DELETE')")
-    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable Long roleId) {
-        roleService.delete(roleId);
-        return success(null, "Role deleted successfully");
     }
 
     @GetMapping("/users/{userId}")
