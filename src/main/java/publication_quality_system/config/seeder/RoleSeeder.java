@@ -179,6 +179,7 @@ public class RoleSeeder implements BaseDataSeeder {
             permissions.addAll(Arrays.asList(
                     PermissionName.USER_READ, PermissionName.ROLE_ASSIGN,
                     PermissionName.ROLE_READ,
+                    PermissionName.FILE_UPLOAD, PermissionName.FILE_DELETE,
                     PermissionName.LAB_MEMBER_CREATE, PermissionName.LAB_MEMBER_READ,
                     PermissionName.LAB_MEMBER_UPDATE, PermissionName.LAB_MEMBER_DELETE,
                     PermissionName.RESEARCH_GROUP_CREATE, PermissionName.RESEARCH_GROUP_READ,
@@ -208,6 +209,7 @@ public class RoleSeeder implements BaseDataSeeder {
                     PermissionName.KNOWLEDGE_BASE_UPDATE));
         } else if (roleName == RoleName.SENIOR_RESEARCHER) {
             permissions.addAll(Arrays.asList(
+                    PermissionName.FILE_UPLOAD,
                     PermissionName.LAB_MEMBER_READ,
                     PermissionName.RESEARCH_GROUP_READ, PermissionName.RESEARCH_PROFILE_READ,
                     PermissionName.PAPER_CREATE, PermissionName.PAPER_READ_OWN,
@@ -230,6 +232,7 @@ public class RoleSeeder implements BaseDataSeeder {
                     PermissionName.KNOWLEDGE_BASE_UPDATE));
         } else if (roleName == RoleName.RESEARCHER) {
             permissions.addAll(Arrays.asList(
+                    PermissionName.FILE_UPLOAD,
                     PermissionName.LAB_MEMBER_READ,
                     PermissionName.RESEARCH_GROUP_READ, PermissionName.RESEARCH_PROFILE_READ,
                     PermissionName.PAPER_CREATE, PermissionName.PAPER_READ_OWN,
