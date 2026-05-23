@@ -1,0 +1,1092 @@
+{
+  "info": {
+    "_postman_id": "aa15ac82-d0ef-45bf-ae10-7e03cc97d999",
+    "name": "Publication Quality System BE API",
+    "description": "Postman Collection hoàn chỉnh cho Publication Quality System. \n\n### Hướng dẫn sử dụng:\n1. Chọn environment `Publication Quality System - Local`.\n2. Chạy request `Auth > POST Login` hoặc `Auth > POST Register` để tự động lấy token và lưu vào environment variable `access_token`.\n3. Các request khác đều kế thừa Bearer token này tự động.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "🔐 Auth",
+      "item": [
+        {
+          "name": "POST Register",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"researcher@example.com\",\n  \"password\": \"SecurePassword123!\",\n  \"fullName\": \"Dr. John Doe\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Đăng ký tài khoản researcher mới. Không yêu cầu auth."
+          },
+          "response": []
+        },
+        {
+          "name": "POST Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData && jsonData.success && jsonData.data) {",
+                  "    if (jsonData.data.accessToken) {",
+                  "        pm.environment.set(\"access_token\", jsonData.data.accessToken);",
+                  "        console.log(\"Saved access_token:\", jsonData.data.accessToken);",
+                  "    }",
+                  "    if (jsonData.data.refreshToken) {",
+                  "        pm.environment.set(\"refresh_token\", jsonData.data.refreshToken);",
+                  "        console.log(\"Saved refresh_token:\", jsonData.data.refreshToken);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"researcher@example.com\",\n  \"password\": \"SecurePassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Đăng nhập và tự động lưu access_token và refresh_token vào environment variables."
+          },
+          "response": []
+        },
+        {
+          "name": "POST Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData && jsonData.success && jsonData.data && jsonData.data.accessToken) {",
+                  "    pm.environment.set(\"access_token\", jsonData.data.accessToken);",
+                  "    console.log(\"Refreshed access_token:\", jsonData.data.accessToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/refresh-token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "refresh-token"
+              ]
+            },
+            "description": "Lấy access token mới bằng refresh token cũ."
+          },
+          "response": []
+        },
+        {
+          "name": "POST Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.environment.set(\"access_token\", \"\");",
+                  "pm.environment.set(\"refresh_token\", \"\");",
+                  "console.log(\"Tokens cleared from environment\");"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accessToken\": \"{{access_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Đăng xuất tài khoản và xóa token khỏi environment."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Me (Current User)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Lấy thông tin và danh sách authorities/permissions của user hiện tại đang login."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "👤 Users",
+      "item": [
+        {
+          "name": "POST Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Dr. Jane Smith\",\n  \"email\": \"janesmith@example.com\",\n  \"password\": \"NewSecretPassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/lab-members/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "lab-members",
+                "users"
+              ]
+            },
+            "description": "Tạo user mới (kế thừa từ BaseCrudController)."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/lab-members/users/{{userId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "lab-members",
+                "users",
+                "{{userId}}"
+              ]
+            },
+            "description": "Lấy thông tin chi tiết user theo ID."
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Dr. Jane Smith Updated\",\n  \"email\": \"janesmith@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/lab-members/users/{{userId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "lab-members",
+                "users",
+                "{{userId}}"
+              ]
+            },
+            "description": "Cập nhật thông tin của user."
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/lab-members/users/{{userId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "lab-members",
+                "users",
+                "{{userId}}"
+              ]
+            },
+            "description": "Xóa mềm / Xóa user theo ID."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🎭 Roles",
+      "item": [
+        {
+          "name": "GET Get All Roles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/roles?page=0&size=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "roles"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Yêu cầu quyền `ROLE_READ`. Trả về danh sách tất cả các roles kèm theo permissions tương ứng."
+          },
+          "response": []
+        },
+        {
+          "name": "POST Create Role",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"SENIOR_RESEARCHER\",\n  \"description\": \"Senior researcher role in the lab\",\n  \"permissions\": [\n    \"PAPER_CREATE\",\n    \"PAPER_UPDATE_OWN\",\n    \"REVIEW_CREATE\",\n    \"INTEGRITY_REPORT_READ_OWN\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/roles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "roles"
+              ]
+            },
+            "description": "Tạo Role mới (Kế thừa từ BaseCrudController)."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Get Role by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/roles/{{roleId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "roles",
+                "{{roleId}}"
+              ]
+            },
+            "description": "Lấy chi tiết 1 Role qua ID."
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Update Role",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"SENIOR_RESEARCHER\",\n  \"description\": \"Senior researcher role - Updated description\",\n  \"permissions\": [\n    \"PAPER_CREATE\",\n    \"PAPER_UPDATE_OWN\",\n    \"REVIEW_CREATE\",\n    \"INTEGRITY_REPORT_READ_OWN\",\n    \"RESEARCH_GROUP_READ\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/roles/{{roleId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "roles",
+                "{{roleId}}"
+              ]
+            },
+            "description": "Cập nhật thông tin của Role."
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE Delete Role",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/roles/{{roleId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "roles",
+                "{{roleId}}"
+              ]
+            },
+            "description": "Xóa role theo ID."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Get User Roles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/roles/users/{{userId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "roles",
+                "users",
+                "{{userId}}"
+              ]
+            },
+            "description": "Yêu cầu quyền `ROLE_READ`. Lấy các roles hiện tại của một user."
+          },
+          "response": []
+        },
+        {
+          "name": "POST Assign Role to User",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/roles/users/{{userId}}/{{roleId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "roles",
+                "users",
+                "{{userId}}",
+                "{{roleId}}"
+              ]
+            },
+            "description": "Yêu cầu quyền `ROLE_ASSIGN`. Gán thêm một role cho user."
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE Remove Role from User",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/roles/users/{{userId}}/{{roleId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "roles",
+                "users",
+                "{{userId}}",
+                "{{roleId}}"
+              ]
+            },
+            "description": "Yêu cầu quyền `ROLE_ASSIGN`. Gỡ một role khỏi user."
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Replace All User Roles",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roleIds\": [1, 2]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/roles/users/{{userId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "roles",
+                "users",
+                "{{userId}}"
+              ]
+            },
+            "description": "Yêu cầu quyền `ROLE_ASSIGN`. Thay thế toàn bộ roles của user bằng danh sách mới."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🔬 Research Profiles",
+      "item": [
+        {
+          "name": "POST Create Profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"institution\": \"FPT University\",\n  \"specialization\": \"AI and Machine Learning\",\n  \"orcid\": \"0000-0002-1825-0097\",\n  \"researchInterests\": \"Natural Language Processing, SQA\",\n  \"academicRank\": \"RESEARCHER\",\n  \"status\": \"ACTIVE\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/lab-members/profiles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "lab-members",
+                "profiles"
+              ]
+            },
+            "description": "Tạo research profile cho user (Kế thừa từ BaseCrudController)."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Get Profile by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/lab-members/profiles/{{userId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "lab-members",
+                "profiles",
+                "{{userId}}"
+              ]
+            },
+            "description": "Lấy profile qua ID (Kế thừa BaseCrudController)."
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"institution\": \"FPT University\",\n  \"specialization\": \"AI and Machine Learning & Deep Learning\",\n  \"orcid\": \"0000-0002-1825-0097\",\n  \"researchInterests\": \"Natural Language Processing, SQA, GenAI\",\n  \"academicRank\": \"ASSOCIATE_PROFESSOR\",\n  \"status\": \"ACTIVE\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/lab-members/profiles/{{userId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "lab-members",
+                "profiles",
+                "{{userId}}"
+              ]
+            },
+            "description": "Cập nhật profile."
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE Delete Profile",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/lab-members/profiles/{{userId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "lab-members",
+                "profiles",
+                "{{userId}}"
+              ]
+            },
+            "description": "Xóa profile."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Get Profile by User ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/lab-members/profiles/user/{{userId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "lab-members",
+                "profiles",
+                "user",
+                "{{userId}}"
+              ]
+            },
+            "description": "Yêu cầu quyền `RESEARCH_PROFILE_READ`. Lấy research profile của một user theo User ID."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "👥 Research Groups",
+      "item": [
+        {
+          "name": "GET Get All Groups",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/lab-members/research-groups?page=0&size=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "lab-members",
+                "research-groups"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Yêu cầu quyền `RESEARCH_GROUP_READ`. Lấy danh sách phân trang các research groups."
+          },
+          "response": []
+        },
+        {
+          "name": "POST Create Group",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Software Quality & Intelligent Systems Group\",\n  \"description\": \"Focus on publication quality checking and validation automation.\",\n  \"researchTopics\": \"Static analysis, LLM reviews, paper compliance\",\n  \"specialization\": \"Software Engineering, AI\",\n  \"institution\": \"FPT University\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/lab-members/research-groups",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "lab-members",
+                "research-groups"
+              ]
+            },
+            "description": "Tạo research group mới (Kế thừa từ BaseCrudController)."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Get Group by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/lab-members/research-groups/{{groupId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "lab-members",
+                "research-groups",
+                "{{groupId}}"
+              ]
+            },
+            "description": "Lấy chi tiết research group theo ID."
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Update Group",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Software Quality & Intelligent Systems Group - Updated\",\n  \"description\": \"Focus on publication quality checking and validation automation.\",\n  \"researchTopics\": \"Static analysis, LLM reviews, paper compliance, security checks\",\n  \"specialization\": \"Software Engineering, Applied AI\",\n  \"institution\": \"FPT University\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/lab-members/research-groups/{{groupId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "lab-members",
+                "research-groups",
+                "{{groupId}}"
+              ]
+            },
+            "description": "Cập nhật thông tin research group."
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE Delete Group",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/lab-members/research-groups/{{groupId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "lab-members",
+                "research-groups",
+                "{{groupId}}"
+              ]
+            },
+            "description": "Xóa research group."
+          },
+          "response": []
+        },
+        {
+          "name": "POST Add Member to Group",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 2,\n  \"role\": \"MEMBER\",\n  \"status\": \"ACTIVE\",\n  \"responsibilities\": \"Analyze formatting and review papers for journal requirements\",\n  \"contributionScore\": 0.0\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/lab-members/research-groups/{{groupId}}/members",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "lab-members",
+                "research-groups",
+                "{{groupId}}",
+                "members"
+              ]
+            },
+            "description": "Yêu cầu quyền `RESEARCH_GROUP_MEMBER_MANAGE`. Thêm một user làm member vào group."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Get Group Members",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/lab-members/research-groups/{{groupId}}/members",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "lab-members",
+                "research-groups",
+                "{{groupId}}",
+                "members"
+              ]
+            },
+            "description": "Yêu cầu quyền `RESEARCH_GROUP_READ`. Lấy danh sách thành viên của một group."
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE Remove Member from Group",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/lab-members/research-groups/{{groupId}}/members/{{userId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "lab-members",
+                "research-groups",
+                "{{groupId}}",
+                "members",
+                "{{userId}}"
+              ]
+            },
+            "description": "Yêu cầu quyền `RESEARCH_GROUP_MEMBER_MANAGE`. Xóa một thành viên khỏi group."
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH Update Member Role",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"REVIEWER\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/lab-members/research-groups/{{groupId}}/members/{{userId}}/role",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "lab-members",
+                "research-groups",
+                "{{groupId}}",
+                "members",
+                "{{userId}}",
+                "role"
+              ]
+            },
+            "description": "Yêu cầu quyền `RESEARCH_GROUP_MEMBER_MANAGE`. Cập nhật vai trò (LEADER, REVIEWER, etc.) của member."
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH Update Member Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ACTIVE\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/lab-members/research-groups/{{groupId}}/members/{{userId}}/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "lab-members",
+                "research-groups",
+                "{{groupId}}",
+                "members",
+                "{{userId}}",
+                "status"
+              ]
+            },
+            "description": "Yêu cầu quyền `RESEARCH_GROUP_MEMBER_MANAGE`. Cập nhật status (ACTIVE, INACTIVE, SUSPENDED) của member."
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH Assign Group Leader",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/lab-members/research-groups/{{groupId}}/leader/{{userId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "lab-members",
+                "research-groups",
+                "{{groupId}}",
+                "leader",
+                "{{userId}}"
+              ]
+            },
+            "description": "Yêu cầu quyền `RESEARCH_GROUP_MEMBER_MANAGE`. Bổ nhiệm một thành viên làm leader của group."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Get Groups by User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/lab-members/research-groups/users/{{userId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "lab-members",
+                "research-groups",
+                "users",
+                "{{userId}}"
+              ]
+            },
+            "description": "Yêu cầu quyền `RESEARCH_GROUP_READ`. Lấy danh sách các research groups mà user đã tham gia."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📁 Files (S3)",
+      "item": [
+        {
+          "name": "POST Upload File",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "folder",
+                  "value": "papers",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/lab-members/files/upload",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "lab-members",
+                "files",
+                "upload"
+              ]
+            },
+            "description": "Yêu cầu quyền `FILE_UPLOAD`. Upload file PDF/Word/Hình ảnh lên AWS S3."
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE Delete File",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/lab-members/files?fileKey={{fileKey}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "lab-members",
+                "files"
+              ],
+              "query": [
+                {
+                  "key": "fileKey",
+                  "value": "{{fileKey}}"
+                }
+              ]
+            },
+            "description": "Yêu cầu quyền `FILE_DELETE`. Xóa file trên S3 sử dụng fileKey."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ]
+}
